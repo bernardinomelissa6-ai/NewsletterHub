@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 17% 98%;
+    --foreground: 0 0% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+    --primary: 277 93% 23%;      /* #48086F */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 283 45% 67%;    /* #B286D1 */
+    --secondary-foreground: 0 0% 10%;
+    --muted: 210 17% 95%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 283 45% 67%;
+    --accent-foreground: 277 93% 23%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 277 93% 23%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 277 90% 5%;     /* #0C0214 */
+    --foreground: 0 0% 100%;
+    --card: 277 80% 8%;
+    --card-foreground: 0 0% 100%;
+    --popover: 277 80% 8%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 283 48% 56%;       /* #985DC1 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 283 45% 67%;     /* #B286D1 */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 277 60% 12%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 277 60% 15%;
+    --accent-foreground: 283 45% 67%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 277 40% 18%;
+    --input: 277 40% 18%;
+    --ring: 283 45% 67%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Scrollbar estilizada */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-muted rounded-full;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground;
+  }
+
+  /* Gradientes de marca */
+  .gradient-brand {
+    background: linear-gradient(135deg, #48086F 0%, #B286D1 100%);
+  }
+  .gradient-brand-dark {
+    background: linear-gradient(135deg, #0C0214 0%, #48086F 100%);
+  }
+
+  /* Medalhas */
+  .medal-bronze {
+    @apply text-orange-700 bg-orange-50 border-orange-200;
+  }
+  .medal-silver {
+    @apply text-gray-600 bg-gray-50 border-gray-200;
+  }
+  .medal-gold {
+    @apply text-yellow-600 bg-yellow-50 border-yellow-200;
+  }
+  .medal-special {
+    @apply text-purple-700 bg-purple-50 border-purple-200;
+  }
+
+  /* Status badges */
+  .status-pending {
+    @apply text-yellow-700 bg-yellow-50 border-yellow-200;
+  }
+  .status-approved {
+    @apply text-green-700 bg-green-50 border-green-200;
+  }
+  .status-rejected {
+    @apply text-red-700 bg-red-50 border-red-200;
+  }
+  .status-returned {
+    @apply text-orange-700 bg-orange-50 border-orange-200;
+  }
+  .status-evaluated {
+    @apply text-purple-700 bg-purple-50 border-purple-200;
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Test-NetConnection -ComputerName \"aws-0-sa-east-1.pooler.supabase.com\" -Port 6543 -InformationLevel Quiet)",
+      "PowerShell(Start-Process \"https://supabase.com/dashboard/project/epdtaqquzvargvberklg/connect\")"
+    ]
+  }
+}

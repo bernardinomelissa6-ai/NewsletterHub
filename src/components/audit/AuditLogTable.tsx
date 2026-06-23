@@ -26,7 +26,7 @@ interface AuditLog {
   userRole: string;
   action: string;
   entityType: string;
-  entityId: string;
+  entityId: string | null;
   createdAt: string;
   ipAddress?: string | null;
 }

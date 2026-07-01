@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useSession, signOut } from "next-auth/react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LogOut, User, Settings } from "lucide-react";
 import { ROLE_LABELS } from "@/lib/utils/permissions";
-import type { Role } from "@prisma/client";
+import type { Role } from "@/lib/supabase/types";
 import Link from "next/link";
 import { cn } from "@/lib/utils/cn";
 
@@ -81,3 +81,4 @@ export function SidebarUser({ collapsed }: SidebarUserProps) {
     </DropdownMenu>
   );
 }
+

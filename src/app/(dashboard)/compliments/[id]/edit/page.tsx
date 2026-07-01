@@ -1,7 +1,6 @@
 import { requireAuth } from "@/lib/auth/session";
 import { getComplimentById } from "@/services/compliment.service";
 import { ComplimentForm } from "@/components/compliments/ComplimentForm";
-import { prisma } from "@/lib/db/prisma";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 
@@ -18,9 +17,11 @@ export default async function EditComplimentPage({ params }: { params: Promise<{
   if (compliment.status !== "DEVOLVIDO_PARA_AJUSTE") redirect(`/compliments/${id}`);
 
   // Only the original collaborator or admin can edit
-  if (compliment.collaborator.id !== session.user.id && session.user.role !== "ADMIN") redirect(`/compliments/${id}`);
+  const coll = (compliment as any).collaborator;
+  if (coll?.id !== session.user.id && session.user.role !== "ADMIN") redirect(`/compliments/${id}`);
 
-  const collaborators = [{ id: compliment.collaborator.id, name: compliment.collaborator.name, area: compliment.collaborator.area }];
+  const collaborators = [{ id: coll?.id, name: coll?.name, area: coll?.area }];
+  const receivedAt = (compliment as any).received_at ?? (compliment as any).receivedAt;
 
   return (
     <div className="max-w-2xl">
@@ -35,12 +36,10 @@ export default async function EditComplimentPage({ params }: { params: Promise<{
         complimentId={id}
         defaultValues={{
           insured: compliment.insured,
-          receivedAt: compliment.receivedAt instanceof Date
-            ? compliment.receivedAt.toISOString().split("T")[0]
-            : String(compliment.receivedAt).split("T")[0],
+          receivedAt: String(receivedAt).split("T")[0],
           branch: compliment.branch,
           reason: compliment.reason,
-          collaboratorId: compliment.collaborator.id,
+          collaboratorId: coll?.id,
         }}
       />
     </div>

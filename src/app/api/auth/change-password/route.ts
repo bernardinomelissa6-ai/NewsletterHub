@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
-import { prisma } from "@/lib/db/prisma";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
@@ -19,14 +19,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
   }
 
-  const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { passwordHash: true } });
-  if (!user?.passwordHash) return NextResponse.json({ error: "Usuário inválido" }, { status: 400 });
+  const { data: user } = await supabaseAdmin.from("users").select("password_hash").eq("id", session.user.id).single();
+  if (!user?.password_hash) return NextResponse.json({ error: "Usuário inválido" }, { status: 400 });
 
-  const valid = await bcrypt.compare(parsed.data.currentPassword, user.passwordHash);
+  const valid = await bcrypt.compare(parsed.data.currentPassword, user.password_hash);
   if (!valid) return NextResponse.json({ error: "Senha atual incorreta" }, { status: 400 });
 
   const hashed = await bcrypt.hash(parsed.data.newPassword, 12);
-  await prisma.user.update({ where: { id: session.user.id }, data: { passwordHash: hashed } });
+  await supabaseAdmin.from("users").update({ password_hash: hashed, updated_at: new Date().toISOString() }).eq("id", session.user.id);
 
   return NextResponse.json({ message: "Senha alterada com sucesso" });
 }

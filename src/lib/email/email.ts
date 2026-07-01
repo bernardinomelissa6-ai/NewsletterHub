@@ -2,7 +2,7 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM = `${process.env.EMAIL_FROM_NAME ?? "Sistema de Reconhecimento"} <${process.env.EMAIL_FROM ?? "noreply@empresa.com.br"}>`;
+const FROM = `${process.env.EMAIL_FROM_NAME ?? "Newsletter Hub"} <${process.env.EMAIL_FROM ?? "noreply@empresa.com.br"}>`;
 
 export interface SendEmailOptions {
   to: string | string[];
@@ -76,7 +76,7 @@ function wrap(content: string): string {
   return `
     <div style="${BASE_STYLE}">
       <div style="${HEADER_STYLE}">
-        <h1 style="margin:0;font-size:20px;">⭐ Sistema de Reconhecimento</h1>
+        <h1 style="margin:0;font-size:20px;">Newsletter Hub</h1>
       </div>
       <div style="${BODY_STYLE}">${content}</div>
       <div style="${FOOTER_STYLE}">

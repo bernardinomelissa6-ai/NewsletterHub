@@ -1,7 +1,7 @@
 import type { NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/db/prisma";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { loginSchema } from "@/lib/validations/auth.schema";
 
 export const authConfig: NextAuthConfig = {
@@ -18,25 +18,18 @@ export const authConfig: NextAuthConfig = {
 
         const { email, password } = parsed.data;
 
-        const user = await prisma.user.findUnique({
-          where: { email: email.toLowerCase() },
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            passwordHash: true,
-            role: true,
-            isActive: true,
-            emailVerified: true,
-            areaId: true,
-          },
-        });
+        const { data: users, error: dbError } = await supabaseAdmin
+          .from("users")
+          .select("id, name, email, password_hash, role, is_active, email_verified, area_id")
+          .eq("email", email.toLowerCase())
+          .limit(1);
 
-        if (!user) return null;
-        if (!user.isActive) return null;
-        if (!user.emailVerified) return null;
+        if (dbError) return null;
 
-        const isValid = await bcrypt.compare(password, user.passwordHash);
+        const user = users?.[0];
+        if (!user || !user.is_active) return null;
+
+        const isValid = await bcrypt.compare(password, user.password_hash);
         if (!isValid) return null;
 
         return {
@@ -44,7 +37,7 @@ export const authConfig: NextAuthConfig = {
           name: user.name,
           email: user.email,
           role: user.role,
-          areaId: user.areaId,
+          areaId: user.area_id,
         };
       },
     }),

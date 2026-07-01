@@ -9,11 +9,9 @@ const BUCKET = process.env.SUPABASE_STORAGE_BUCKET ?? "reconhecimento";
 
 export const ALLOWED_COMPLIMENT_TYPES = [
   "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "image/png",
-  "image/jpeg",
-  "image/jpg",
+  "message/rfc822",
+  "application/vnd.ms-outlook",
+  "application/octet-stream",
 ];
 
 export const ALLOWED_TRAINING_TYPES = [

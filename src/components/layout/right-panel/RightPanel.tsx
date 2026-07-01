@@ -1,40 +1,27 @@
-import { prisma } from "@/lib/db/prisma";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { MEDAL_LABELS, MEDAL_COLORS } from "@/lib/utils/ranking";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Star, Trophy, TrendingUp } from "lucide-react";
 import Link from "next/link";
-import type { MedalType } from "@prisma/client";
+import type { MedalType } from "@/lib/supabase/types";
 
 async function getRecentData() {
-  const [recentCompliments, recentMedals] = await Promise.all([
-    prisma.compliment.findMany({
-      where: { status: "AVALIADO" },
-      orderBy: { updatedAt: "desc" },
-      take: 5,
-      select: {
-        id: true,
-        insured: true,
-        updatedAt: true,
-        collaborator: { select: { name: true } },
-        evaluations: { select: { medal: true } },
-      },
-    }),
-    prisma.complimentEvaluation.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 3,
-      include: {
-        compliment: {
-          select: {
-            insured: true,
-            collaborator: { select: { name: true } },
-          },
-        },
-      },
-    }),
+  const [{ data: recentCompliments }, { data: recentMedals }] = await Promise.all([
+    supabaseAdmin
+      .from("compliments")
+      .select("id, insured, updated_at, collaborator:users!compliments_collaborator_id_fkey(name), evaluations:compliment_evaluations(medal)")
+      .eq("status", "AVALIADO")
+      .order("updated_at", { ascending: false })
+      .limit(5),
+    supabaseAdmin
+      .from("compliment_evaluations")
+      .select("id, medal, compliment:compliments!compliment_evaluations_compliment_id_fkey(insured, collaborator:users!compliments_collaborator_id_fkey(name))")
+      .order("created_at", { ascending: false })
+      .limit(3),
   ]);
 
-  return { recentCompliments, recentMedals };
+  return { recentCompliments: recentCompliments ?? [], recentMedals: recentMedals ?? [] };
 }
 
 export async function RightPanel() {
@@ -58,7 +45,7 @@ export async function RightPanel() {
               Medalhas Recentes
             </p>
             <div className="space-y-2">
-              {recentMedals.map((evaluation) => {
+              {recentMedals.map((evaluation: any) => {
                 const medal = evaluation.medal as MedalType;
                 const colorClass = MEDAL_COLORS[medal];
                 const medalEmoji = { SPECIAL: "🏆", GOLD: "🥇", SILVER: "🥈", BRONZE: "🥉" }[medal] ?? "⭐";
@@ -67,10 +54,10 @@ export async function RightPanel() {
                     <span className="text-lg">{medalEmoji}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold truncate">
-                        {evaluation.compliment.collaborator.name}
+                        {evaluation.compliment?.collaborator?.name ?? ""}
                       </p>
                       <p className="text-[10px] opacity-75 truncate">
-                        {MEDAL_LABELS[medal]} • {evaluation.compliment.insured}
+                        {MEDAL_LABELS[medal]} • {evaluation.compliment?.insured ?? ""}
                       </p>
                     </div>
                   </div>
@@ -87,8 +74,8 @@ export async function RightPanel() {
               Elogios Recentes
             </p>
             <div className="space-y-2">
-              {recentCompliments.map((c) => {
-                const medal = c.evaluations[0]?.medal as MedalType | undefined;
+              {recentCompliments.map((c: any) => {
+                const medal = c.evaluations?.[0]?.medal as MedalType | undefined;
                 const emoji = medal ? { SPECIAL: "🏆", GOLD: "🥇", SILVER: "🥈", BRONZE: "🥉" }[medal] : "⭐";
                 return (
                   <Link
@@ -98,10 +85,10 @@ export async function RightPanel() {
                   >
                     <span className="text-base mt-0.5">{emoji}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium truncate">{c.collaborator.name}</p>
+                      <p className="text-xs font-medium truncate">{c.collaborator?.name ?? ""}</p>
                       <p className="text-[10px] text-muted-foreground truncate">{c.insured}</p>
                       <p className="text-[10px] text-muted-foreground">
-                        {formatDistanceToNow(c.updatedAt, { addSuffix: true, locale: ptBR })}
+                        {formatDistanceToNow(new Date(c.updated_at), { addSuffix: true, locale: ptBR })}
                       </p>
                     </div>
                   </Link>

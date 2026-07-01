@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { TrainingType } from "@prisma/client";
+import { TrainingType } from "@/lib/supabase/types";
 
 export const createTrainingSchema = z.object({
   insured: z.string().min(2, "Nome obrigatório").max(300),

@@ -6,7 +6,7 @@ import { Users, Building2, Star, BookOpen, Trophy, Medal } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { ROLE_LABELS } from "@/lib/utils/permissions";
 import { MEDAL_LABELS } from "@/lib/utils/ranking";
-import type { Role } from "@prisma/client";
+import type { Role } from "@/lib/supabase/types";
 
 interface Props {
   data: {

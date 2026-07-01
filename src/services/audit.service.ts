@@ -1,5 +1,6 @@
-import { prisma } from "@/lib/db/prisma";
-import type { AuditAction } from "@prisma/client";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import type { AuditAction } from "@/lib/supabase/types";
+import { randomUUID } from "crypto";
 
 export interface AuditLogInput {
   userId: string;
@@ -16,19 +17,18 @@ export interface AuditLogInput {
 
 export async function createAuditLog(input: AuditLogInput): Promise<void> {
   try {
-    await prisma.auditLog.create({
-      data: {
-        userId: input.userId,
-        userName: input.userName,
-        userRole: input.userRole,
-        action: input.action,
-        entityType: input.entityType,
-        entityId: input.entityId,
-        previousValue: input.previousValue ?? undefined,
-        newValue: input.newValue ?? undefined,
-        ipAddress: input.ipAddress,
-        userAgent: input.userAgent,
-      },
+    await supabaseAdmin.from("audit_logs").insert({
+      id: randomUUID(),
+      user_id: input.userId,
+      user_name: input.userName,
+      user_role: input.userRole,
+      action: input.action,
+      entity_type: input.entityType,
+      entity_id: input.entityId,
+      previous_value: input.previousValue ?? null,
+      new_value: input.newValue ?? null,
+      ip_address: input.ipAddress,
+      user_agent: input.userAgent,
     });
   } catch (err) {
     console.error("[AuditService] Falha ao registrar log:", err);
@@ -49,39 +49,26 @@ export interface AuditFilter {
 
 export async function getAuditLogs(filter: AuditFilter = {}) {
   const { page = 1, limit = 50, userId, action, entityType, entityId, startDate, endDate, search } = filter;
-  const skip = (page - 1) * limit;
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
 
-  const where: Record<string, unknown> = {
-    ...(userId && { userId }),
-    ...(action && { action }),
-    ...(entityType && { entityType }),
-    ...(entityId && { entityId }),
-    ...(startDate || endDate
-      ? {
-          createdAt: {
-            ...(startDate && { gte: startDate }),
-            ...(endDate && { lte: endDate }),
-          },
-        }
-      : {}),
-    ...(search && {
-      OR: [
-        { userName: { contains: search, mode: "insensitive" as const } },
-        { entityType: { contains: search, mode: "insensitive" as const } },
-      ],
-    }),
-  };
+  let query = supabaseAdmin
+    .from("audit_logs")
+    .select("*, user:users(name, email)", { count: "exact" })
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
-  const [data, total] = await Promise.all([
-    prisma.auditLog.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip,
-      take: limit,
-      include: { user: { select: { name: true, email: true } } },
-    }),
-    prisma.auditLog.count({ where }),
-  ]);
+  if (userId) query = query.eq("user_id", userId);
+  if (action) query = query.eq("action", action);
+  if (entityType) query = query.eq("entity_type", entityType);
+  if (entityId) query = query.eq("entity_id", entityId);
+  if (startDate) query = query.gte("created_at", startDate.toISOString());
+  if (endDate) query = query.lte("created_at", endDate.toISOString());
+  if (search) query = query.or(`user_name.ilike.%${search}%,entity_type.ilike.%${search}%`);
 
-  return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+  const { data, count, error } = await query;
+  if (error) throw error;
+
+  const total = count ?? 0;
+  return { data: data ?? [], total, page, limit, totalPages: Math.ceil(total / limit) };
 }

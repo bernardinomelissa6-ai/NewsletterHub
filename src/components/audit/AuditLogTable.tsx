@@ -21,14 +21,14 @@ const ACTION_COLORS: Record<string, string> = {
 
 interface AuditLog {
   id: string;
-  userId: string;
-  userName: string;
-  userRole: string;
+  user_id: string;
+  user_name: string;
+  user_role: string;
   action: string;
-  entityType: string;
-  entityId: string | null;
-  createdAt: string;
-  ipAddress?: string | null;
+  entity_type: string;
+  entity_id: string | null;
+  created_at: string;
+  ip_address?: string | null;
 }
 
 interface Props {
@@ -108,11 +108,11 @@ export function AuditLogTable({ initialData }: Props) {
                 {data.map((log) => (
                   <tr key={log.id} className="border-b last:border-0 hover:bg-accent/50 text-xs">
                     <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                      {format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: ptBR })}
+                      {format(new Date(log.created_at), "dd/MM/yyyy HH:mm:ss", { locale: ptBR })}
                     </td>
                     <td className="px-4 py-3">
-                      <p className="font-medium">{log.userName}</p>
-                      <p className="text-muted-foreground">{log.userRole}</p>
+                      <p className="font-medium">{log.user_name}</p>
+                      <p className="text-muted-foreground">{log.user_role}</p>
                     </td>
                     <td className="px-4 py-3">
                       <span className={`font-semibold px-2 py-0.5 rounded text-xs ${ACTION_COLORS[log.action] ?? "bg-gray-100 text-gray-700"}`}>
@@ -120,10 +120,10 @@ export function AuditLogTable({ initialData }: Props) {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
-                      <p>{log.entityType}</p>
-                      <p className="font-mono text-xs truncate max-w-32">{log.entityId}</p>
+                      <p>{log.entity_type}</p>
+                      <p className="font-mono text-xs truncate max-w-32">{log.entity_id}</p>
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell font-mono">{log.ipAddress ?? "—"}</td>
+                    <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell font-mono">{log.ip_address ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>

@@ -1,31 +1,34 @@
-import { prisma } from "@/lib/db/prisma";
-import type { DeadlineType } from "@prisma/client";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import type { DeadlineType } from "@/lib/supabase/types";
+import { randomUUID } from "crypto";
 
 export async function getDeadlines() {
-  return prisma.deadline.findMany({ orderBy: { type: "asc" } });
+  const { data } = await supabaseAdmin.from("deadlines").select("*").order("type");
+  return data ?? [];
 }
 
 export async function getDeadline(type: DeadlineType) {
-  return prisma.deadline.findUnique({ where: { type } });
+  const { data } = await supabaseAdmin.from("deadlines").select("*").eq("type", type).single();
+  return data;
 }
 
 export async function upsertDeadline(type: DeadlineType, days: number) {
-  return prisma.deadline.upsert({
-    where: { type },
-    update: { days },
-    create: { type, days },
-  });
+  const existing = await getDeadline(type);
+  const now = new Date().toISOString();
+  if (existing) {
+    const { data } = await supabaseAdmin.from("deadlines").update({ days, updated_at: now }).eq("type", type).select().single();
+    return data;
+  } else {
+    const { data } = await supabaseAdmin.from("deadlines").insert({ id: randomUUID(), type, days, updated_at: now }).select().single();
+    return data;
+  }
 }
 
 export async function getDeadlineMap(): Promise<Record<DeadlineType, number>> {
   const deadlines = await getDeadlines();
-  const defaults: Record<DeadlineType, number> = {
-    REGISTRATION: 30,
-    APPROVAL: 7,
-    EVALUATION: 5,
-  };
+  const defaults: Record<DeadlineType, number> = { REGISTRATION: 30, APPROVAL: 7, EVALUATION: 5 };
   for (const d of deadlines) {
-    defaults[d.type] = d.days;
+    defaults[d.type as DeadlineType] = d.days;
   }
   return defaults;
 }

@@ -1,25 +1,21 @@
 import { requireRole } from "@/lib/auth/session";
 import { getPendingEvaluations } from "@/services/compliment.service";
-import { prisma } from "@/lib/db/prisma";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { PendingEvaluationList } from "@/components/compliments/PendingEvaluationList";
 import type { Metadata } from "next";
+
+const COMPLIMENT_SELECT = `id, insured, received_at, branch, reason, status, quarter, year, created_at, updated_at,
+  collaborator:users!compliments_collaborator_id_fkey(id, name, area:areas(name)),
+  approvals:compliment_approvals(id, action, observation, created_at, manager:users!compliment_approvals_manager_id_fkey(name)),
+  evaluations:compliment_evaluations(id, medal, justification, director:users!compliment_evaluations_director_id_fkey(name))`;
 
 export const metadata: Metadata = { title: "Avaliação de Elogios" };
 
 export default async function PendingEvaluationPage() {
   const session = await requireRole("DIRECTOR", "ADMIN");
 
-  // ADMIN sees all pending evaluations; DIRECTOR sees only their areas
   const compliments = session.user.role === "ADMIN"
-    ? await prisma.compliment.findMany({
-        where: { status: "PENDENTE_AVALIACAO" },
-        orderBy: { createdAt: "asc" },
-        include: {
-          collaborator: { select: { id: true, name: true, area: { select: { name: true } } } },
-          approvals: { orderBy: { createdAt: "desc" }, include: { manager: { select: { name: true } } } },
-          evaluations: { include: { director: { select: { name: true } } } },
-        },
-      })
+    ? ((await supabaseAdmin.from("compliments").select(COMPLIMENT_SELECT).eq("status", "PENDENTE_AVALIACAO").order("created_at")).data ?? [])
     : await getPendingEvaluations(session.user.id);
 
   return (

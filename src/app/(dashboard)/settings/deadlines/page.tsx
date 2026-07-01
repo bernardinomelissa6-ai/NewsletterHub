@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth/session";
-import { prisma } from "@/lib/db/prisma";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { DeadlineSettings } from "@/components/settings/DeadlineSettings";
 import type { Metadata } from "next";
 
@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Controle de Prazos" };
 export default async function DeadlinesPage() {
   await requireRole("ADMIN");
 
-  const deadlines = await prisma.deadline.findMany({ orderBy: { type: "asc" } });
+  const { data: deadlines } = await supabaseAdmin.from("deadlines").select("*").order("type");
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -18,7 +18,7 @@ export default async function DeadlinesPage() {
           Configure os prazos de cada etapa do fluxo de elogios
         </p>
       </div>
-      <DeadlineSettings deadlines={deadlines as any} />
+      <DeadlineSettings deadlines={(deadlines ?? []) as any} />
     </div>
   );
 }

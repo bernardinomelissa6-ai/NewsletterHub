@@ -1,5 +1,5 @@
 import { requireAuth } from "@/lib/auth/session";
-import { prisma } from "@/lib/db/prisma";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { TrainingForm } from "@/components/trainings/TrainingForm";
 import type { Metadata } from "next";
 
@@ -9,25 +9,18 @@ export default async function NewTrainingPage() {
   const session = await requireAuth();
   const { role, id: userId } = session.user;
 
-  let collaborators;
+  let collaborators: any[] = [];
   if (role === "ADMIN") {
-    collaborators = await prisma.user.findMany({
-      where: { isActive: true, role: "COLLABORATOR" },
-      select: { id: true, name: true, area: { select: { name: true } } },
-      orderBy: { name: "asc" },
-    });
+    const { data } = await supabaseAdmin.from("users").select("id, name, area:areas(name)").eq("is_active", true).eq("role", "COLLABORATOR").order("name");
+    collaborators = data ?? [];
   } else if (role === "MANAGER") {
-    const areas = await prisma.area.findMany({ where: { managerId: userId }, select: { id: true } });
-    collaborators = await prisma.user.findMany({
-      where: { isActive: true, role: "COLLABORATOR", areaId: { in: areas.map((a) => a.id) } },
-      select: { id: true, name: true, area: { select: { name: true } } },
-      orderBy: { name: "asc" },
-    });
+    const { data: areas } = await supabaseAdmin.from("areas").select("id").eq("manager_id", userId);
+    const areaIds = (areas ?? []).map((a) => a.id);
+    const { data } = await supabaseAdmin.from("users").select("id, name, area:areas(name)").eq("is_active", true).eq("role", "COLLABORATOR").in("area_id", areaIds).order("name");
+    collaborators = data ?? [];
   } else {
-    collaborators = await prisma.user.findMany({
-      where: { id: userId },
-      select: { id: true, name: true, area: { select: { name: true } } },
-    });
+    const { data } = await supabaseAdmin.from("users").select("id, name, area:areas(name)").eq("id", userId);
+    collaborators = data ?? [];
   }
 
   return (

@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth/session";
-import { prisma } from "@/lib/db/prisma";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { AreaTable } from "@/components/areas/AreaTable";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -11,19 +11,23 @@ export const metadata: Metadata = { title: "Áreas" };
 export default async function AreasPage() {
   await requireRole("ADMIN");
 
-  const areas = await prisma.area.findMany({
-    orderBy: { name: "asc" },
-    include: {
-      manager: { select: { id: true, name: true } },
-      _count: { select: { collaborators: true } },
-    },
-  });
+  const { data: areasRaw } = await supabaseAdmin
+    .from("areas")
+    .select("*, manager:users!areas_manager_id_fkey(id, name), collaborators:users(id)")
+    .order("name");
 
-  const managers = await prisma.user.findMany({
-    where: { role: { in: ["MANAGER", "ADMIN"] }, isActive: true },
-    select: { id: true, name: true },
-    orderBy: { name: "asc" },
-  });
+  const areas = (areasRaw ?? []).map((a) => ({
+    ...a,
+    _count: { collaborators: Array.isArray(a.collaborators) ? a.collaborators.length : 0 },
+    collaborators: undefined,
+  }));
+
+  const { data: managers } = await supabaseAdmin
+    .from("users")
+    .select("id, name")
+    .in("role", ["MANAGER", "ADMIN"])
+    .eq("is_active", true)
+    .order("name");
 
   return (
     <div className="space-y-6">
@@ -36,7 +40,7 @@ export default async function AreasPage() {
           <Link href="/areas/new"><Plus className="w-4 h-4" /> Nova Área</Link>
         </Button>
       </div>
-      <AreaTable areas={areas as any} managers={managers} />
+      <AreaTable areas={areas as any} managers={managers ?? []} />
     </div>
   );
 }

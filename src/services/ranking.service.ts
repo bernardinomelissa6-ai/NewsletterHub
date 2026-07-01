@@ -1,6 +1,6 @@
-import { prisma } from "@/lib/db/prisma";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { MEDAL_POINTS, sortCollaborators, type CollaboratorScore } from "@/lib/utils/ranking";
-import type { MedalType } from "@prisma/client";
+import type { MedalType } from "@/lib/supabase/types";
 
 export interface RankingFilter {
   year?: number;
@@ -11,59 +11,68 @@ export interface RankingFilter {
 export async function getCollaboratorRanking(filter: RankingFilter = {}): Promise<CollaboratorScore[]> {
   const { year, quarter, areaId } = filter;
 
-  const complimentWhere: Record<string, unknown> = { status: "AVALIADO" };
-  if (year) complimentWhere.year = year;
-  if (quarter) complimentWhere.quarter = quarter;
+  let usersQuery = supabaseAdmin
+    .from("users")
+    .select("id, name, area_id, area:areas(name)")
+    .eq("role", "COLLABORATOR")
+    .eq("is_active", true);
 
-  const trainingWhere: Record<string, unknown> = {};
-  if (year) trainingWhere.year = year;
-  if (quarter) trainingWhere.quarter = quarter;
+  if (areaId) usersQuery = usersQuery.eq("area_id", areaId);
 
-  const userWhere: Record<string, unknown> = { role: "COLLABORATOR", isActive: true };
-  if (areaId) userWhere.areaId = areaId;
+  const { data: users } = await usersQuery;
+  if (!users || users.length === 0) return [];
 
-  const users = await prisma.user.findMany({
-    where: userWhere,
-    select: {
-      id: true,
-      name: true,
-      areaId: true,
-      area: { select: { name: true } },
-      receivedCompliments: {
-        where: complimentWhere,
-        select: {
-          id: true,
-          evaluations: { select: { medal: true } },
-        },
-      },
-      receivedTrainings: {
-        where: trainingWhere,
-        select: { id: true },
-      },
-    },
-  });
+  const userIds = users.map((u) => u.id);
+
+  let complimentsQuery = supabaseAdmin
+    .from("compliments")
+    .select("collaborator_id, evaluations:compliment_evaluations(medal)")
+    .eq("status", "AVALIADO")
+    .in("collaborator_id", userIds);
+
+  if (year) complimentsQuery = complimentsQuery.eq("year", year);
+  if (quarter) complimentsQuery = complimentsQuery.eq("quarter", quarter);
+
+  let trainingsQuery = supabaseAdmin
+    .from("trainings")
+    .select("collaborator_id")
+    .in("collaborator_id", userIds);
+
+  if (year) trainingsQuery = trainingsQuery.eq("year", year);
+  if (quarter) trainingsQuery = trainingsQuery.eq("quarter", quarter);
+
+  const [{ data: compliments }, { data: trainings }] = await Promise.all([complimentsQuery, trainingsQuery]);
+
+  const medalsByUser = new Map<string, { medal: string }[]>();
+  const trainingsByUser = new Map<string, number>();
+
+  for (const c of compliments ?? []) {
+    const evals = medalsByUser.get(c.collaborator_id) ?? [];
+    for (const e of (c.evaluations as { medal: string }[])) evals.push(e);
+    medalsByUser.set(c.collaborator_id, evals);
+  }
+  for (const t of trainings ?? []) {
+    trainingsByUser.set(t.collaborator_id, (trainingsByUser.get(t.collaborator_id) ?? 0) + 1);
+  }
 
   const scores: CollaboratorScore[] = users.map((user) => {
-    const medals = user.receivedCompliments.flatMap((c) => c.evaluations);
+    const medals = medalsByUser.get(user.id) ?? [];
     const score = medals.reduce((acc, { medal }) => acc + MEDAL_POINTS[medal as MedalType], 0);
-
     const medalCounts = { SPECIAL: 0, GOLD: 0, SILVER: 0, BRONZE: 0 };
-    for (const { medal } of medals) {
-      medalCounts[medal as keyof typeof medalCounts]++;
-    }
+    for (const { medal } of medals) medalCounts[medal as keyof typeof medalCounts]++;
 
     return {
       userId: user.id,
       name: user.name,
-      areaId: user.areaId,
-      areaName: user.area?.name ?? null,
+      areaId: user.area_id,
+      areaName: (user.area as any)?.name ?? null,
       score,
       specialCount: medalCounts.SPECIAL,
       goldCount: medalCounts.GOLD,
       silverCount: medalCounts.SILVER,
       bronzeCount: medalCounts.BRONZE,
-      totalCompliments: user.receivedCompliments.length,
-      totalTrainings: user.receivedTrainings.length,
+      totalCompliments: (medalsByUser.get(user.id) ?? []).length,
+      totalTrainings: trainingsByUser.get(user.id) ?? 0,
     };
   });
 
@@ -115,32 +124,32 @@ export async function getAreaRanking(filter: RankingFilter = {}): Promise<AreaSc
 }
 
 export async function getTeamRanking(managerId: string, filter: RankingFilter = {}): Promise<CollaboratorScore[]> {
-  const areas = await prisma.area.findMany({ where: { managerId }, select: { id: true } });
-  const areaIds = areas.map((a) => a.id);
+  const { data: areas } = await supabaseAdmin.from("areas").select("id").eq("manager_id", managerId);
+  const areaIds = (areas ?? []).map((a) => a.id);
   const collaborators = await getCollaboratorRanking({ ...filter });
   return collaborators.filter((c) => c.areaId && areaIds.includes(c.areaId));
 }
 
 export async function getUserScore(userId: string, filter: RankingFilter = {}) {
   const { year, quarter } = filter;
-  const where: Record<string, unknown> = { status: "AVALIADO", collaboratorId: userId };
-  if (year) where.year = year;
-  if (quarter) where.quarter = quarter;
 
-  const compliments = await prisma.compliment.findMany({
-    where,
-    select: { evaluations: { select: { medal: true } } },
-  });
+  let query = supabaseAdmin
+    .from("compliments")
+    .select("evaluations:compliment_evaluations(medal)")
+    .eq("status", "AVALIADO")
+    .eq("collaborator_id", userId);
 
-  const medals = compliments.flatMap((c) => c.evaluations);
+  if (year) query = query.eq("year", year);
+  if (quarter) query = query.eq("quarter", quarter);
+
+  const { data: compliments } = await query;
+
+  const medals = (compliments ?? []).flatMap((c) => (c.evaluations as { medal: string }[]));
   const score = medals.reduce((acc, { medal }) => acc + MEDAL_POINTS[medal as MedalType], 0);
-
   const medalCounts = { SPECIAL: 0, GOLD: 0, SILVER: 0, BRONZE: 0 };
-  for (const { medal } of medals) {
-    medalCounts[medal as keyof typeof medalCounts]++;
-  }
+  for (const { medal } of medals) medalCounts[medal as keyof typeof medalCounts]++;
 
-  return { score, medals: medalCounts, totalCompliments: compliments.length };
+  return { score, medals: medalCounts, totalCompliments: (compliments ?? []).length };
 }
 
 export async function getQuarterlyEvolution(userId: string, year: number) {

@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db/prisma";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createAuditLog } from "./audit.service";
 import {
   notifyComplimentApproved,
@@ -9,6 +9,7 @@ import {
   notifyDirectorNewPending,
 } from "./notification.service";
 import { getQuarter } from "@/lib/utils/quarters";
+import { randomUUID } from "crypto";
 import type {
   CreateComplimentInput,
   ApproveComplimentInput,
@@ -19,34 +20,31 @@ import type {
   ComplimentFilterInput,
 } from "@/lib/validations/compliment.schema";
 
-const COMPLIMENT_SELECT = {
-  id: true,
-  insured: true,
-  receivedAt: true,
-  branch: true,
-  reason: true,
-  status: true,
-  attachmentUrl: true,
-  attachmentName: true,
-  attachmentType: true,
-  quarter: true,
-  year: true,
-  createdAt: true,
-  updatedAt: true,
-  collaborator: { select: { id: true, name: true, email: true, areaId: true, area: { select: { id: true, name: true } } } },
-  submittedBy: { select: { id: true, name: true } },
-  approvals: {
-    orderBy: { createdAt: "desc" as const },
-    include: { manager: { select: { id: true, name: true } } },
-  },
-  evaluations: {
-    include: { director: { select: { id: true, name: true } } },
-  },
-  reevaluations: {
-    orderBy: { createdAt: "desc" as const },
-    include: { director: { select: { id: true, name: true } } },
-  },
-};
+const COMPLIMENT_LIST_SELECT = `
+  id, insured, received_at, branch, reason, status,
+  attachment_url, quarter, year, created_at,
+  collaborator:users!compliments_collaborator_id_fkey(id, name),
+  evaluations:compliment_evaluations(medal)
+`;
+
+const COMPLIMENT_SELECT = `
+  id, insured, received_at, branch, reason, status,
+  attachment_url, attachment_name, attachment_type,
+  quarter, year, created_at, updated_at,
+  collaborator:users!compliments_collaborator_id_fkey(
+    id, name, email, area_id,
+    area:areas(id, name)
+  ),
+  submitted_by:users!compliments_submitted_by_id_fkey(id, name),
+  approvals:compliment_approvals(
+    id, action, observation, created_at,
+    manager:users!compliment_approvals_manager_id_fkey(id, name)
+  ),
+  evaluations:compliment_evaluations(
+    id, medal, justification, comment,
+    director:users!compliment_evaluations_director_id_fkey(id, name)
+  )
+`;
 
 export async function createCompliment(
   input: CreateComplimentInput,
@@ -62,118 +60,102 @@ export async function createCompliment(
   const year = receivedAt.getFullYear();
   const quarter = getQuarter(receivedAt);
 
-  const compliment = await prisma.compliment.create({
-    data: {
-      insured: input.insured,
-      receivedAt,
-      branch: input.branch,
-      reason: input.reason,
-      collaboratorId: input.collaboratorId,
-      submittedById,
-      attachmentUrl,
-      attachmentName,
-      attachmentType,
-      year,
-      quarter,
-    },
-    include: { collaborator: { select: { areaId: true } } },
-  });
+  const { data: compliment, error } = await supabaseAdmin.from("compliments").insert({
+    id: randomUUID(),
+    insured: input.insured,
+    received_at: receivedAt.toISOString(),
+    branch: input.branch,
+    reason: input.reason,
+    collaborator_id: input.collaboratorId,
+    submitted_by_id: submittedById,
+    attachment_url: attachmentUrl ?? null,
+    attachment_name: attachmentName ?? null,
+    attachment_type: attachmentType ?? null,
+    year,
+    quarter,
+    status: "PENDENTE_APROVACAO",
+    updated_at: new Date().toISOString(),
+  }).select("id, insured, collaborator_id, collaborator:users!compliments_collaborator_id_fkey(area_id)").single();
 
-  await createAuditLog({
-    userId: submittedById,
-    userName: submittedByName,
-    userRole: submittedByRole,
-    action: "CREATE",
-    entityType: "Compliment",
-    entityId: compliment.id,
-    newValue: { insured: input.insured, collaboratorId: input.collaboratorId, status: "PENDENTE_APROVACAO" },
-    ipAddress,
-  });
+  if (error) throw error;
 
-  notifyManagerNewPending({
-    id: compliment.id,
-    insured: compliment.insured,
-    collaboratorId: compliment.collaboratorId,
-    areaId: compliment.collaborator.areaId,
-  }).catch(console.error);
+  await createAuditLog({ userId: submittedById, userName: submittedByName, userRole: submittedByRole, action: "CREATE", entityType: "Compliment", entityId: compliment.id, newValue: { insured: input.insured, collaboratorId: input.collaboratorId, status: "PENDENTE_APROVACAO" }, ipAddress });
+
+  const areaId = (compliment.collaborator as any)?.area_id ?? null;
+  notifyManagerNewPending({ id: compliment.id, insured: compliment.insured, collaboratorId: compliment.collaborator_id, areaId }).catch(console.error);
 
   return compliment;
 }
 
 export async function getComplimentById(id: string) {
-  return prisma.compliment.findUnique({ where: { id }, select: COMPLIMENT_SELECT });
+  const { data } = await supabaseAdmin.from("compliments").select(COMPLIMENT_SELECT).eq("id", id).single();
+  return data;
 }
 
 export async function getCompliments(filter: ComplimentFilterInput, userId: string, userRole: string, userAreaId: string | null) {
   const { page, limit, status, collaboratorId, areaId, branch, year, quarter, search } = filter;
-  const skip = (page - 1) * limit;
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
 
-  let where: Record<string, unknown> = {};
+  let collaboratorFilter: string[] | null = null;
 
   if (userRole === "COLLABORATOR") {
-    where.collaboratorId = userId;
+    collaboratorFilter = [userId];
   } else if (userRole === "MANAGER") {
-    const managedAreas = await prisma.area.findMany({ where: { managerId: userId }, select: { id: true } });
-    const areaIds = managedAreas.map((a) => a.id);
-    where.collaborator = { areaId: { in: areaIds } };
+    const { data: areas } = await supabaseAdmin.from("areas").select("id").eq("manager_id", userId);
+    const areaIds = (areas ?? []).map((a: any) => a.id);
+    const { data: colls } = await supabaseAdmin.from("users").select("id").in("area_id", areaIds);
+    collaboratorFilter = (colls ?? []).map((u: any) => u.id);
+    if (collaboratorFilter.length === 0) return { data: [], total: 0, page, limit, totalPages: 0 };
+  } else if (userRole === "DIRECTOR" && areaId) {
+    const { data: colls } = await supabaseAdmin.from("users").select("id").eq("area_id", areaId);
+    collaboratorFilter = (colls ?? []).map((u: any) => u.id);
   }
 
-  if (status) where.status = status;
-  if (collaboratorId && userRole !== "COLLABORATOR") where.collaboratorId = collaboratorId;
-  if (areaId && userRole !== "COLLABORATOR" && userRole !== "MANAGER") {
-    where.collaborator = { areaId };
-  }
-  if (branch) where.branch = { contains: branch, mode: "insensitive" };
-  if (year) where.year = year;
-  if (quarter) where.quarter = quarter;
-  if (search) {
-    where.OR = [
-      { insured: { contains: search, mode: "insensitive" } },
-      { reason: { contains: search, mode: "insensitive" } },
-      { collaborator: { name: { contains: search, mode: "insensitive" } } },
-    ];
+  let query = supabaseAdmin
+    .from("compliments")
+    .select(COMPLIMENT_LIST_SELECT, { count: "exact" })
+    .order("created_at", { ascending: false })
+    .range(from, to);
+
+  if (collaboratorFilter) query = query.in("collaborator_id", collaboratorFilter);
+  if (status) query = query.eq("status", status);
+  if (collaboratorId && userRole !== "COLLABORATOR") query = query.eq("collaborator_id", collaboratorId);
+  if (branch) query = query.ilike("branch", `%${branch}%`);
+  if (year) query = query.eq("year", year);
+  if (quarter) query = query.eq("quarter", quarter);
+  if (search) query = query.or(`insured.ilike.%${search}%,reason.ilike.%${search}%`);
+
+  const { data, count, error } = await query;
+  if (error) {
+    console.error("getCompliments error:", JSON.stringify(error));
+    return { data: [], total: 0, page, limit, totalPages: 0 };
   }
 
-  const [data, total] = await Promise.all([
-    prisma.compliment.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip,
-      take: limit,
-      select: COMPLIMENT_SELECT,
-    }),
-    prisma.compliment.count({ where }),
-  ]);
-
-  return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+  const total = count ?? 0;
+  return { data: data ?? [], total, page, limit, totalPages: Math.ceil(total / limit) };
 }
 
 export async function getPendingApprovals(managerId: string) {
-  const managedAreas = await prisma.area.findMany({ where: { managerId }, select: { id: true } });
-  const areaIds = managedAreas.map((a) => a.id);
+  const { data: areas } = await supabaseAdmin.from("areas").select("id").eq("manager_id", managerId);
+  const areaIds = (areas ?? []).map((a: any) => a.id);
+  const { data: colls } = await supabaseAdmin.from("users").select("id").in("area_id", areaIds);
+  const collaboratorIds = (colls ?? []).map((u: any) => u.id);
+  if (collaboratorIds.length === 0) return [];
 
-  return prisma.compliment.findMany({
-    where: {
-      status: "PENDENTE_APROVACAO",
-      collaborator: { areaId: { in: areaIds } },
-    },
-    orderBy: { createdAt: "asc" },
-    select: COMPLIMENT_SELECT,
-  });
+  const { data } = await supabaseAdmin.from("compliments").select(COMPLIMENT_SELECT).eq("status", "PENDENTE_APROVACAO").in("collaborator_id", collaboratorIds).order("created_at");
+  return data ?? [];
 }
 
 export async function getPendingEvaluations(directorId: string) {
-  const directedAreas = await prisma.area.findMany({ where: { directorId }, select: { id: true } });
-  const areaIds = directedAreas.map((a) => a.id);
+  const { data: areas } = await supabaseAdmin.from("areas").select("id").eq("director_id", directorId);
+  const areaIds = (areas ?? []).map((a: any) => a.id);
+  const { data: colls } = await supabaseAdmin.from("users").select("id").in("area_id", areaIds);
+  const collaboratorIds = (colls ?? []).map((u: any) => u.id);
+  if (collaboratorIds.length === 0) return [];
 
-  return prisma.compliment.findMany({
-    where: {
-      status: "PENDENTE_AVALIACAO",
-      collaborator: { areaId: { in: areaIds } },
-    },
-    orderBy: { createdAt: "asc" },
-    select: COMPLIMENT_SELECT,
-  });
+  const { data } = await supabaseAdmin.from("compliments").select(COMPLIMENT_SELECT).eq("status", "PENDENTE_AVALIACAO").in("collaborator_id", collaboratorIds).order("created_at");
+  return data ?? [];
 }
 
 export async function approveCompliment(
@@ -184,34 +166,17 @@ export async function approveCompliment(
   input: ApproveComplimentInput,
   ipAddress?: string
 ) {
-  const previous = await prisma.compliment.findUnique({ where: { id }, select: { status: true, insured: true, collaboratorId: true } });
+  const { data: previous } = await supabaseAdmin.from("compliments").select("status, insured, collaborator_id").eq("id", id).single();
   if (!previous || previous.status !== "PENDENTE_APROVACAO") throw new Error("Elogio não está pendente de aprovação");
 
-  const [updated] = await Promise.all([
-    prisma.compliment.update({ where: { id }, data: { status: "PENDENTE_AVALIACAO" } }),
-    prisma.complimentApproval.create({
-      data: { complimentId: id, managerId, action: "APPROVED", observation: input.observation },
-    }),
-  ]);
+  await supabaseAdmin.from("compliments").update({ status: "PENDENTE_AVALIACAO", updated_at: new Date().toISOString() }).eq("id", id);
+  await supabaseAdmin.from("compliment_approvals").insert({ id: randomUUID(), compliment_id: id, manager_id: managerId, action: "APPROVED", observation: input.observation });
 
-  await createAuditLog({
-    userId: managerId,
-    userName: managerName,
-    userRole: managerRole,
-    action: "APPROVE",
-    entityType: "Compliment",
-    entityId: id,
-    previousValue: { status: previous.status },
-    newValue: { status: "PENDENTE_AVALIACAO" },
-    ipAddress,
-  });
+  await createAuditLog({ userId: managerId, userName: managerName, userRole: managerRole, action: "APPROVE", entityType: "Compliment", entityId: id, previousValue: { status: previous.status }, newValue: { status: "PENDENTE_AVALIACAO" }, ipAddress });
 
-  const collaborator = await prisma.user.findUnique({ where: { id: previous.collaboratorId }, select: { areaId: true } });
-
-  notifyComplimentApproved({ id, insured: previous.insured, collaboratorId: previous.collaboratorId }).catch(console.error);
-  notifyDirectorNewPending({ id, insured: previous.insured, collaboratorId: previous.collaboratorId, areaId: collaborator?.areaId ?? null }).catch(console.error);
-
-  return updated;
+  const { data: collaborator } = await supabaseAdmin.from("users").select("area_id").eq("id", previous.collaborator_id).single();
+  notifyComplimentApproved({ id, insured: previous.insured, collaboratorId: previous.collaborator_id }).catch(console.error);
+  notifyDirectorNewPending({ id, insured: previous.insured, collaboratorId: previous.collaborator_id, areaId: collaborator?.area_id ?? null }).catch(console.error);
 }
 
 export async function rejectCompliment(
@@ -222,36 +187,15 @@ export async function rejectCompliment(
   input: RejectComplimentInput,
   ipAddress?: string
 ) {
-  const previous = await prisma.compliment.findUnique({ where: { id }, select: { status: true, insured: true, collaboratorId: true } });
+  const { data: previous } = await supabaseAdmin.from("compliments").select("status, insured, collaborator_id").eq("id", id).single();
   if (!previous || previous.status !== "PENDENTE_APROVACAO") throw new Error("Elogio não está pendente de aprovação");
 
-  const [updated] = await Promise.all([
-    prisma.compliment.update({ where: { id }, data: { status: "REJEITADO" } }),
-    prisma.complimentApproval.create({
-      data: { complimentId: id, managerId, action: "REJECTED", observation: input.observation },
-    }),
-  ]);
+  await supabaseAdmin.from("compliments").update({ status: "REJEITADO", updated_at: new Date().toISOString() }).eq("id", id);
+  await supabaseAdmin.from("compliment_approvals").insert({ id: randomUUID(), compliment_id: id, manager_id: managerId, action: "REJECTED", observation: input.observation });
 
-  await createAuditLog({
-    userId: managerId,
-    userName: managerName,
-    userRole: managerRole,
-    action: "REJECT",
-    entityType: "Compliment",
-    entityId: id,
-    previousValue: { status: previous.status },
-    newValue: { status: "REJEITADO", reason: input.observation },
-    ipAddress,
-  });
+  await createAuditLog({ userId: managerId, userName: managerName, userRole: managerRole, action: "REJECT", entityType: "Compliment", entityId: id, previousValue: { status: previous.status }, newValue: { status: "REJEITADO", reason: input.observation }, ipAddress });
 
-  notifyComplimentRejected({
-    id,
-    insured: previous.insured,
-    collaboratorId: previous.collaboratorId,
-    reason: input.observation,
-  }).catch(console.error);
-
-  return updated;
+  notifyComplimentRejected({ id, insured: previous.insured, collaboratorId: previous.collaborator_id, reason: input.observation }).catch(console.error);
 }
 
 export async function returnCompliment(
@@ -262,36 +206,15 @@ export async function returnCompliment(
   input: ReturnComplimentInput,
   ipAddress?: string
 ) {
-  const previous = await prisma.compliment.findUnique({ where: { id }, select: { status: true, insured: true, collaboratorId: true } });
+  const { data: previous } = await supabaseAdmin.from("compliments").select("status, insured, collaborator_id").eq("id", id).single();
   if (!previous || previous.status !== "PENDENTE_APROVACAO") throw new Error("Elogio não está pendente de aprovação");
 
-  const [updated] = await Promise.all([
-    prisma.compliment.update({ where: { id }, data: { status: "DEVOLVIDO_PARA_AJUSTE" } }),
-    prisma.complimentApproval.create({
-      data: { complimentId: id, managerId, action: "RETURNED", observation: input.observation },
-    }),
-  ]);
+  await supabaseAdmin.from("compliments").update({ status: "DEVOLVIDO_PARA_AJUSTE", updated_at: new Date().toISOString() }).eq("id", id);
+  await supabaseAdmin.from("compliment_approvals").insert({ id: randomUUID(), compliment_id: id, manager_id: managerId, action: "RETURNED", observation: input.observation });
 
-  await createAuditLog({
-    userId: managerId,
-    userName: managerName,
-    userRole: managerRole,
-    action: "RETURN_FOR_ADJUSTMENT",
-    entityType: "Compliment",
-    entityId: id,
-    previousValue: { status: previous.status },
-    newValue: { status: "DEVOLVIDO_PARA_AJUSTE" },
-    ipAddress,
-  });
+  await createAuditLog({ userId: managerId, userName: managerName, userRole: managerRole, action: "RETURN_FOR_ADJUSTMENT", entityType: "Compliment", entityId: id, previousValue: { status: previous.status }, newValue: { status: "DEVOLVIDO_PARA_AJUSTE" }, ipAddress });
 
-  notifyComplimentReturned({
-    id,
-    insured: previous.insured,
-    collaboratorId: previous.collaboratorId,
-    observation: input.observation,
-  }).catch(console.error);
-
-  return updated;
+  notifyComplimentReturned({ id, insured: previous.insured, collaboratorId: previous.collaborator_id, observation: input.observation }).catch(console.error);
 }
 
 export async function evaluateCompliment(
@@ -302,37 +225,15 @@ export async function evaluateCompliment(
   input: EvaluateComplimentInput,
   ipAddress?: string
 ) {
-  const previous = await prisma.compliment.findUnique({ where: { id }, select: { status: true, insured: true, collaboratorId: true } });
+  const { data: previous } = await supabaseAdmin.from("compliments").select("status, insured, collaborator_id").eq("id", id).single();
   if (!previous || previous.status !== "PENDENTE_AVALIACAO") throw new Error("Elogio não está pendente de avaliação");
 
-  const [updated] = await Promise.all([
-    prisma.compliment.update({ where: { id }, data: { status: "AVALIADO" } }),
-    prisma.complimentEvaluation.create({
-      data: { complimentId: id, directorId, medal: input.medal, justification: input.justification, comment: input.comment },
-    }),
-  ]);
+  await supabaseAdmin.from("compliments").update({ status: "AVALIADO", updated_at: new Date().toISOString() }).eq("id", id);
+  await supabaseAdmin.from("compliment_evaluations").insert({ id: randomUUID(), compliment_id: id, director_id: directorId, medal: input.medal, justification: input.justification, comment: input.comment ?? null, updated_at: new Date().toISOString() });
 
-  await createAuditLog({
-    userId: directorId,
-    userName: directorName,
-    userRole: directorRole,
-    action: "EVALUATE",
-    entityType: "Compliment",
-    entityId: id,
-    previousValue: { status: previous.status },
-    newValue: { status: "AVALIADO", medal: input.medal },
-    ipAddress,
-  });
+  await createAuditLog({ userId: directorId, userName: directorName, userRole: directorRole, action: "EVALUATE", entityType: "Compliment", entityId: id, previousValue: { status: previous.status }, newValue: { status: "AVALIADO", medal: input.medal }, ipAddress });
 
-  notifyComplimentEvaluated({
-    id,
-    insured: previous.insured,
-    collaboratorId: previous.collaboratorId,
-    medal: input.medal,
-    justification: input.justification,
-  }).catch(console.error);
-
-  return updated;
+  notifyComplimentEvaluated({ id, insured: previous.insured, collaboratorId: previous.collaborator_id, medal: input.medal, justification: input.justification }).catch(console.error);
 }
 
 export async function reevaluateCompliment(
@@ -343,44 +244,19 @@ export async function reevaluateCompliment(
   input: ReevaluateComplimentInput,
   ipAddress?: string
 ) {
-  const evaluation = await prisma.complimentEvaluation.findUnique({
-    where: { complimentId: id },
-    select: { medal: true },
-  });
+  const { data: evaluation } = await supabaseAdmin.from("compliment_evaluations").select("id, medal").eq("compliment_id", id).single();
   if (!evaluation) throw new Error("Elogio não foi avaliado ainda");
 
-  const [updated] = await Promise.all([
-    prisma.complimentEvaluation.update({ where: { complimentId: id }, data: { medal: input.medal, updatedAt: new Date() } }),
-    prisma.complimentReevaluation.create({
-      data: { complimentId: id, directorId, previousMedal: evaluation.medal, newMedal: input.medal, reason: input.reason },
-    }),
-  ]);
+  await supabaseAdmin.from("compliment_evaluations").update({ medal: input.medal, updated_at: new Date().toISOString() }).eq("compliment_id", id);
+  await supabaseAdmin.from("compliment_reevaluations").insert({ id: randomUUID(), compliment_id: id, director_id: directorId, previous_medal: evaluation.medal, new_medal: input.medal, reason: input.reason });
 
-  const compliment = await prisma.compliment.findUnique({ where: { id }, select: { insured: true, collaboratorId: true } });
+  const { data: compliment } = await supabaseAdmin.from("compliments").select("insured, collaborator_id").eq("id", id).single();
 
-  await createAuditLog({
-    userId: directorId,
-    userName: directorName,
-    userRole: directorRole,
-    action: "REEVALUATE",
-    entityType: "Compliment",
-    entityId: id,
-    previousValue: { medal: evaluation.medal },
-    newValue: { medal: input.medal, reason: input.reason },
-    ipAddress,
-  });
+  await createAuditLog({ userId: directorId, userName: directorName, userRole: directorRole, action: "REEVALUATE", entityType: "Compliment", entityId: id, previousValue: { medal: evaluation.medal }, newValue: { medal: input.medal, reason: input.reason }, ipAddress });
 
   if (compliment) {
-    notifyComplimentEvaluated({
-      id,
-      insured: compliment.insured,
-      collaboratorId: compliment.collaboratorId,
-      medal: input.medal,
-      justification: input.reason,
-    }).catch(console.error);
+    notifyComplimentEvaluated({ id, insured: compliment.insured, collaboratorId: compliment.collaborator_id, medal: input.medal, justification: input.reason }).catch(console.error);
   }
-
-  return updated;
 }
 
 export async function updateCompliment(
@@ -391,58 +267,37 @@ export async function updateCompliment(
   data: Partial<CreateComplimentInput> & { attachmentUrl?: string; attachmentName?: string; attachmentType?: string },
   ipAddress?: string
 ) {
-  const previous = await prisma.compliment.findUnique({ where: { id } });
+  const { data: previous } = await supabaseAdmin.from("compliments").select("*").eq("id", id).single();
   if (!previous) throw new Error("Elogio não encontrado");
 
-  if (userRole === "COLLABORATOR" && previous.submittedById !== userId) {
-    throw new Error("Sem permissão para editar este elogio");
-  }
+  if (userRole === "COLLABORATOR" && previous.submitted_by_id !== userId) throw new Error("Sem permissão para editar este elogio");
+  if (!["PENDENTE_APROVACAO", "DEVOLVIDO_PARA_AJUSTE"].includes(previous.status) && userRole !== "ADMIN") throw new Error("Este elogio não pode ser editado no status atual");
 
-  if (!["PENDENTE_APROVACAO", "DEVOLVIDO_PARA_AJUSTE"].includes(previous.status) && userRole !== "ADMIN") {
-    throw new Error("Este elogio não pode ser editado no status atual");
-  }
-
-  const updateData: Record<string, unknown> = {};
+  const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (data.insured) updateData.insured = data.insured;
   if (data.receivedAt) {
     const d = new Date(data.receivedAt);
-    updateData.receivedAt = d;
+    updateData.received_at = d.toISOString();
     updateData.year = d.getFullYear();
     updateData.quarter = getQuarter(d);
   }
   if (data.branch) updateData.branch = data.branch;
   if (data.reason) updateData.reason = data.reason;
-  if (data.collaboratorId) updateData.collaboratorId = data.collaboratorId;
-  if (data.attachmentUrl !== undefined) updateData.attachmentUrl = data.attachmentUrl;
-  if (data.attachmentName !== undefined) updateData.attachmentName = data.attachmentName;
-  if (data.attachmentType !== undefined) updateData.attachmentType = data.attachmentType;
+  if (data.collaboratorId) updateData.collaborator_id = data.collaboratorId;
+  if (data.attachmentUrl !== undefined) updateData.attachment_url = data.attachmentUrl;
+  if (data.attachmentName !== undefined) updateData.attachment_name = data.attachmentName;
+  if (data.attachmentType !== undefined) updateData.attachment_type = data.attachmentType;
+
+  if (previous.status === "DEVOLVIDO_PARA_AJUSTE") updateData.status = "PENDENTE_APROVACAO";
+
+  const { data: updated, error } = await supabaseAdmin.from("compliments").update(updateData).eq("id", id).select().single();
+  if (error) throw error;
+
+  await createAuditLog({ userId, userName, userRole, action: "UPDATE", entityType: "Compliment", entityId: id, previousValue: { status: previous.status, insured: previous.insured }, newValue: updateData, ipAddress });
 
   if (previous.status === "DEVOLVIDO_PARA_AJUSTE") {
-    updateData.status = "PENDENTE_APROVACAO";
-  }
-
-  const updated = await prisma.compliment.update({ where: { id }, data: updateData });
-
-  await createAuditLog({
-    userId,
-    userName,
-    userRole,
-    action: "UPDATE",
-    entityType: "Compliment",
-    entityId: id,
-    previousValue: { status: previous.status, insured: previous.insured },
-    newValue: updateData,
-    ipAddress,
-  });
-
-  if (previous.status === "DEVOLVIDO_PARA_AJUSTE") {
-    const collaborator = await prisma.user.findUnique({ where: { id: previous.collaboratorId }, select: { areaId: true } });
-    notifyManagerNewPending({
-      id,
-      insured: updated.insured,
-      collaboratorId: updated.collaboratorId,
-      areaId: collaborator?.areaId ?? null,
-    }).catch(console.error);
+    const { data: collaborator } = await supabaseAdmin.from("users").select("area_id").eq("id", updated.collaborator_id).single();
+    notifyManagerNewPending({ id, insured: updated.insured, collaboratorId: updated.collaborator_id, areaId: collaborator?.area_id ?? null }).catch(console.error);
   }
 
   return updated;

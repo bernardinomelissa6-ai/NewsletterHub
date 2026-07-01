@@ -1,6 +1,6 @@
 import { requireRole } from "@/lib/auth/session";
 import { getPendingApprovals } from "@/services/compliment.service";
-import { prisma } from "@/lib/db/prisma";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { PendingApprovalList } from "@/components/compliments/PendingApprovalList";
 import type { Metadata } from "next";
 
@@ -10,13 +10,7 @@ export default async function PendingApprovalPage() {
   const session = await requireRole("MANAGER", "ADMIN");
 
   const compliments = session.user.role === "ADMIN"
-    ? await prisma.compliment.findMany({
-        where: { status: "PENDENTE_APROVACAO" },
-        orderBy: { createdAt: "asc" },
-        include: {
-          collaborator: { select: { id: true, name: true, area: { select: { name: true } } } },
-        },
-      })
+    ? ((await supabaseAdmin.from("compliments").select("id, insured, received_at, branch, reason, status, quarter, year, created_at, collaborator:users!compliments_collaborator_id_fkey(id, name, area:areas(name))").eq("status", "PENDENTE_APROVACAO").order("created_at")).data ?? [])
     : await getPendingApprovals(session.user.id);
 
   return (

@@ -35,8 +35,8 @@ export default function RegisterPage() {
         toast.error(json.error ?? "Erro ao criar conta");
         return;
       }
-      toast.success("Conta criada! Verifique seu e-mail para ativar.");
-      router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
+      toast.success(json.message ?? "Pronto! Faça login para continuar.");
+      router.push("/login");
     } finally {
       setLoading(false);
     }
@@ -45,8 +45,8 @@ export default function RegisterPage() {
   return (
     <Card className="border-0 shadow-lg">
       <CardHeader className="space-y-1 pb-4">
-        <CardTitle className="text-2xl font-bold">Criar conta</CardTitle>
-        <CardDescription>Preencha seus dados para começar</CardDescription>
+        <CardTitle className="text-2xl font-bold">Configurar acesso</CardTitle>
+        <CardDescription>Crie sua conta admin ou redefina sua senha</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
@@ -79,7 +79,7 @@ export default function RegisterPage() {
             </div>
             {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
             <p className="text-xs text-muted-foreground">
-              Mínimo 8 caracteres, 1 maiúscula, 1 número e 1 especial
+              Mínimo 8 caracteres, 1 maiúscula e 1 número
             </p>
           </div>
           <div className="space-y-2">
@@ -95,7 +95,7 @@ export default function RegisterPage() {
         </CardContent>
         <CardFooter className="flex flex-col gap-3">
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Criando conta...</> : "Criar conta"}
+            {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Aguarde...</> : "Confirmar"}
           </Button>
           <p className="text-sm text-center text-muted-foreground">
             Já tem conta?{" "}

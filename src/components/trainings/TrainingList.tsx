@@ -25,7 +25,7 @@ interface Training {
   branch: string;
   quarter: number;
   year: number;
-  attachmentUrl: string | null;
+  attachment_url: string | null;
   collaborator: { id: string; name: string; area?: { name: string } | null };
 }
 
@@ -123,7 +123,7 @@ export function TrainingList({ initialData, userRole }: Props) {
                         <span>{t.collaborator.name}</span>
                         {t.collaborator.area && <span>• {t.collaborator.area.name}</span>}
                         <span>• {format(new Date(t.date), "dd/MM/yyyy", { locale: ptBR })}</span>
-                        {t.attachmentUrl && <span className="flex items-center gap-1"><Paperclip className="w-3 h-3" /> Anexo</span>}
+                        {t.attachment_url && <span className="flex items-center gap-1"><Paperclip className="w-3 h-3" /> Anexo</span>}
                       </div>
                     </div>
                   </div>

@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Shield, User, Calendar, Loader2 } from "lucide-react";
 import { MEDAL_LABELS, MEDAL_POINTS } from "@/lib/utils/ranking";
-import type { MedalType } from "@prisma/client";
+import type { MedalType } from "@/lib/supabase/types";
 
 interface Compliment {
   id: string;

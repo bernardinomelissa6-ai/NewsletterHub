@@ -1,4 +1,4 @@
-import type { MedalType } from "@prisma/client";
+﻿import type { MedalType } from "@/lib/supabase/types";
 
 export const MEDAL_POINTS: Record<MedalType, number> = {
   SPECIAL: 10,
@@ -55,3 +55,4 @@ export function sortCollaborators(collaborators: CollaboratorScore[]): Collabora
     return b.totalTrainings - a.totalTrainings;
   });
 }
+

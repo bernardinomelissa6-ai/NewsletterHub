@@ -1,79 +1,52 @@
-import { prisma } from "@/lib/db/prisma";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getUserScore, getCollaboratorRanking, getAreaRanking } from "./ranking.service";
 
 export async function getCollaboratorDashboard(userId: string, year: number, quarter?: number) {
   const filter = { year, ...(quarter && { quarter }) };
 
-  const [scoreData, compliments, trainings, rank] = await Promise.all([
+  const [scoreData, complimentsData, trainingsData, rankingData] = await Promise.all([
     getUserScore(userId, filter),
-    prisma.compliment.groupBy({
-      by: ["status"],
-      where: { collaboratorId: userId, year },
-      _count: true,
-    }),
-    prisma.training.groupBy({
-      by: ["type"],
-      where: { collaboratorId: userId, year },
-      _count: true,
-    }),
-    getCollaboratorRanking(filter).then((ranking) => {
-      const pos = ranking.findIndex((r) => r.userId === userId);
-      return pos >= 0 ? { position: pos + 1, total: ranking.length } : null;
-    }),
+    supabaseAdmin.from("compliments").select("status").eq("collaborator_id", userId).eq("year", year),
+    supabaseAdmin.from("trainings").select("type").eq("collaborator_id", userId).eq("year", year),
+    getCollaboratorRanking(filter),
   ]);
 
-  const complimentStats = {
-    total: 0,
-    approved: 0,
-    rejected: 0,
-    pending: 0,
-    evaluated: 0,
-  };
-  for (const g of compliments) {
-    complimentStats.total += g._count;
-    if (g.status === "AVALIADO") complimentStats.evaluated += g._count;
-    else if (g.status === "REJEITADO") complimentStats.rejected += g._count;
-    else if (["PENDENTE_APROVACAO", "PENDENTE_AVALIACAO"].includes(g.status)) complimentStats.pending += g._count;
+  const complimentStats = { total: 0, approved: 0, rejected: 0, pending: 0, evaluated: 0 };
+  for (const c of complimentsData.data ?? []) {
+    complimentStats.total++;
+    if (c.status === "AVALIADO") complimentStats.evaluated++;
+    else if (c.status === "REJEITADO") complimentStats.rejected++;
+    else if (["PENDENTE_APROVACAO", "PENDENTE_AVALIACAO"].includes(c.status)) complimentStats.pending++;
   }
 
   const trainingStats = { TRAINING: 0, CONSULTANCY: 0, COURSE: 0 };
-  for (const t of trainings) {
-    trainingStats[t.type as keyof typeof trainingStats] = t._count;
+  for (const t of trainingsData.data ?? []) {
+    trainingStats[t.type as keyof typeof trainingStats]++;
   }
 
-  return {
-    score: scoreData.score,
-    medals: scoreData.medals,
-    compliments: complimentStats,
-    trainings: trainingStats,
-    ranking: rank,
-  };
+  const pos = rankingData.findIndex((r) => r.userId === userId);
+  const rank = pos >= 0 ? { position: pos + 1, total: rankingData.length } : null;
+
+  return { score: scoreData.score, medals: scoreData.medals, compliments: complimentStats, trainings: trainingStats, ranking: rank };
 }
 
 export async function getManagerDashboard(managerId: string) {
-  const areas = await prisma.area.findMany({ where: { managerId }, select: { id: true } });
-  const areaIds = areas.map((a) => a.id);
+  const { data: areas } = await supabaseAdmin.from("areas").select("id").eq("manager_id", managerId);
+  const areaIds = (areas ?? []).map((a: any) => a.id);
+  if (areaIds.length === 0) return { pendingApproval: 0, totalCompliments: 0, approved: 0, rejected: 0, evaluated: 0 };
 
-  const [pending, total, byStatus] = await Promise.all([
-    prisma.compliment.count({
-      where: { status: "PENDENTE_APROVACAO", collaborator: { areaId: { in: areaIds } } },
-    }),
-    prisma.compliment.count({
-      where: { collaborator: { areaId: { in: areaIds } } },
-    }),
-    prisma.compliment.groupBy({
-      by: ["status"],
-      where: { collaborator: { areaId: { in: areaIds } } },
-      _count: true,
-    }),
-  ]);
+  const { data: colls } = await supabaseAdmin.from("users").select("id").in("area_id", areaIds);
+  const collaboratorIds = (colls ?? []).map((u: any) => u.id);
+  if (collaboratorIds.length === 0) return { pendingApproval: 0, totalCompliments: 0, approved: 0, rejected: 0, evaluated: 0 };
 
+  const { data: compliments } = await supabaseAdmin.from("compliments").select("status").in("collaborator_id", collaboratorIds);
+  const all = compliments ?? [];
   const statusMap: Record<string, number> = {};
-  for (const g of byStatus) statusMap[g.status] = g._count;
+  for (const c of all) statusMap[c.status] = (statusMap[c.status] ?? 0) + 1;
 
   return {
-    pendingApproval: pending,
-    totalCompliments: total,
+    pendingApproval: statusMap["PENDENTE_APROVACAO"] ?? 0,
+    totalCompliments: all.length,
     approved: (statusMap["PENDENTE_AVALIACAO"] ?? 0) + (statusMap["AVALIADO"] ?? 0),
     rejected: statusMap["REJEITADO"] ?? 0,
     evaluated: statusMap["AVALIADO"] ?? 0,
@@ -81,61 +54,52 @@ export async function getManagerDashboard(managerId: string) {
 }
 
 export async function getDirectorDashboard(directorId: string) {
-  const areas = await prisma.area.findMany({ where: { directorId }, select: { id: true } });
-  const areaIds = areas.map((a) => a.id);
+  const { data: areas } = await supabaseAdmin.from("areas").select("id").eq("director_id", directorId);
+  const areaIds = (areas ?? []).map((a: any) => a.id);
+  if (areaIds.length === 0) return { pendingEvaluation: 0, totalCompliments: 0, evaluated: 0, approved: 0 };
 
-  const [pending, total, byStatus] = await Promise.all([
-    prisma.compliment.count({
-      where: { status: "PENDENTE_AVALIACAO", collaborator: { areaId: { in: areaIds } } },
-    }),
-    prisma.compliment.count({ where: { collaborator: { areaId: { in: areaIds } } } }),
-    prisma.compliment.groupBy({
-      by: ["status"],
-      where: { collaborator: { areaId: { in: areaIds } } },
-      _count: true,
-    }),
-  ]);
+  const { data: colls } = await supabaseAdmin.from("users").select("id").in("area_id", areaIds);
+  const collaboratorIds = (colls ?? []).map((u: any) => u.id);
+  if (collaboratorIds.length === 0) return { pendingEvaluation: 0, totalCompliments: 0, evaluated: 0, approved: 0 };
 
+  const { data: compliments } = await supabaseAdmin.from("compliments").select("status").in("collaborator_id", collaboratorIds);
+  const all = compliments ?? [];
   const statusMap: Record<string, number> = {};
-  for (const g of byStatus) statusMap[g.status] = g._count;
+  for (const c of all) statusMap[c.status] = (statusMap[c.status] ?? 0) + 1;
 
   return {
-    pendingEvaluation: pending,
-    totalCompliments: total,
+    pendingEvaluation: statusMap["PENDENTE_AVALIACAO"] ?? 0,
+    totalCompliments: all.length,
     evaluated: statusMap["AVALIADO"] ?? 0,
     approved: statusMap["PENDENTE_AVALIACAO"] ?? 0,
   };
 }
 
 export async function getAdminDashboard() {
-  const [users, areas, compliments, trainings, medals] = await Promise.all([
-    prisma.user.count({ where: { isActive: true } }),
-    prisma.area.count({ where: { isActive: true } }),
-    prisma.compliment.count(),
-    prisma.training.count(),
-    prisma.complimentEvaluation.count(),
-  ]);
-
-  const byStatus = await prisma.compliment.groupBy({ by: ["status"], _count: true });
-  const statusMap: Record<string, number> = {};
-  for (const g of byStatus) statusMap[g.status] = g._count;
-
-  const byRole = await prisma.user.groupBy({ by: ["role"], _count: true, where: { isActive: true } });
-  const roleMap: Record<string, number> = {};
-  for (const g of byRole) roleMap[g.role] = g._count;
-
-  const [topCollaborators, topAreas] = await Promise.all([
+  const [usersRes, areasRes, complaintsRes, trainingsRes, medalsRes, byRoleRes, topColls, topAreas] = await Promise.all([
+    supabaseAdmin.from("users").select("*", { count: "exact", head: true }).eq("is_active", true),
+    supabaseAdmin.from("areas").select("*", { count: "exact", head: true }).eq("is_active", true),
+    supabaseAdmin.from("compliments").select("status"),
+    supabaseAdmin.from("trainings").select("*", { count: "exact", head: true }),
+    supabaseAdmin.from("compliment_evaluations").select("*", { count: "exact", head: true }),
+    supabaseAdmin.from("users").select("role").eq("is_active", true),
     getCollaboratorRanking().then((r) => r.slice(0, 5)),
     getAreaRanking().then((r) => r.slice(0, 5)),
   ]);
 
+  const statusMap: Record<string, number> = {};
+  for (const c of complaintsRes.data ?? []) statusMap[c.status] = (statusMap[c.status] ?? 0) + 1;
+
+  const roleMap: Record<string, number> = {};
+  for (const u of byRoleRes.data ?? []) roleMap[u.role] = (roleMap[u.role] ?? 0) + 1;
+
   return {
-    users: { total: users, byRole: roleMap },
-    areas,
-    compliments: { total: compliments, byStatus: statusMap },
-    trainings,
-    medals,
-    topCollaborators,
+    users: { total: usersRes.count ?? 0, byRole: roleMap },
+    areas: areasRes.count ?? 0,
+    compliments: { total: (complaintsRes.data ?? []).length, byStatus: statusMap },
+    trainings: trainingsRes.count ?? 0,
+    medals: medalsRes.count ?? 0,
+    topCollaborators: topColls,
     topAreas,
   };
 }

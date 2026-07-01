@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import { getComplimentById, updateCompliment } from "@/services/compliment.service";
-import { prisma } from "@/lib/db/prisma";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { uploadFile, ALLOWED_COMPLIMENT_TYPES } from "@/lib/storage/supabase-storage";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!compliment) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
   const { role, id: userId } = session.user;
-  if (role === "COLLABORATOR" && compliment.collaboratorId !== userId && compliment.submittedBy.id !== userId) {
+  if (role === "COLLABORATOR" && (compliment as any).collaborator_id !== userId && (compliment as any).submitted_by?.id !== userId) {
     return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
   }
 
@@ -68,7 +68,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const { id } = await params;
 
   try {
-    await prisma.compliment.delete({ where: { id } });
+    await supabaseAdmin.from("compliments").delete().eq("id", id);
     return NextResponse.json({ message: "Excluído com sucesso" });
   } catch {
     return NextResponse.json({ error: "Erro ao excluir" }, { status: 500 });

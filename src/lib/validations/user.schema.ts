@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Role } from "@prisma/client";
+import { Role } from "@/lib/supabase/types";
 
 export const createUserSchema = z.object({
   name: z.string().min(3).max(200),

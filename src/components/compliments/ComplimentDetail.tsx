@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Edit, Paperclip, User, Calendar, Tag, Award } from "lucide-react";
-import type { MedalType, ComplimentStatus } from "@prisma/client";
+import type { MedalType, ComplimentStatus } from "@/lib/supabase/types";
 
 const STATUS_LABELS: Record<ComplimentStatus, string> = {
   PENDENTE_APROVACAO: "Pendente de Aprovação",

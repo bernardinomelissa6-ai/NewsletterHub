@@ -38,7 +38,7 @@ export default async function ComplimentsPage() {
           </Link>
         </Button>
       </div>
-      <ComplimentList initialData={result} userRole={role} userId={userId} />
+      <ComplimentList initialData={result as any} userRole={role} userId={userId} />
     </div>
   );
 }

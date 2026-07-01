@@ -15,8 +15,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <Star className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="font-bold text-lg leading-none">Sistema de</p>
-            <p className="text-purple-200 text-sm">Reconhecimento</p>
+            <p className="font-bold text-lg leading-none">Newsletter</p>
+            <p className="text-purple-200 text-sm">Hub</p>
           </div>
         </div>
 
@@ -29,20 +29,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </p>
         </div>
 
-        <div className="flex gap-6 text-sm text-purple-200">
-          <div>
-            <p className="text-2xl font-bold text-white">⭐</p>
-            <p>Elogios</p>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-white">🏆</p>
-            <p>Medalhas</p>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-white">📈</p>
-            <p>Rankings</p>
-          </div>
-        </div>
+        <div />
       </div>
 
       {/* Right panel - form */}
@@ -53,7 +40,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <div className="w-8 h-8 gradient-brand rounded-lg flex items-center justify-center">
               <Star className="w-4 h-4 text-white" />
             </div>
-            <span className="font-bold text-foreground">Sistema de Reconhecimento</span>
+            <span className="font-bold text-foreground">Newsletter Hub</span>
           </div>
           {children}
         </div>

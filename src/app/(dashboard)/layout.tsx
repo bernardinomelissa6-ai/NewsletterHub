@@ -1,9 +1,9 @@
-import { requireAuth } from "@/lib/auth/session";
+﻿import { requireAuth } from "@/lib/auth/session";
 import { Sidebar } from "@/components/layout/sidebar/Sidebar";
 import { RightPanel } from "@/components/layout/right-panel/RightPanel";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { countUnread } from "@/services/notification.service";
-import type { Role } from "@prisma/client";
+import type { Role } from "@/lib/supabase/types";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await requireAuth();
@@ -26,3 +26,4 @@ export default async function DashboardLayout({ children }: { children: React.Re
     </SessionProvider>
   );
 }
+

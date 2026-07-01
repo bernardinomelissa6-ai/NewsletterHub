@@ -1,6 +1,6 @@
 import { requireAuth } from "@/lib/auth/session";
 import { getCollaboratorRanking } from "@/services/ranking.service";
-import { prisma } from "@/lib/db/prisma";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { CollaboratorRankingTable } from "@/components/rankings/CollaboratorRankingTable";
 import type { Metadata } from "next";
 
@@ -16,14 +16,14 @@ export default async function CollaboratorsRankingPage() {
   const filter: { year: number; quarter: number; areaId?: string } = { year: currentYear, quarter: currentQuarter };
 
   if (role === "MANAGER") {
-    const areas = await prisma.area.findMany({ where: { managerId: userId }, select: { id: true } });
-    if (areas.length > 0) filter.areaId = areas[0].id;
+    const { data: areas } = await supabaseAdmin.from("areas").select("id").eq("manager_id", userId);
+    if (areas && areas.length > 0) filter.areaId = areas[0].id;
   }
 
   const ranking = await getCollaboratorRanking(filter);
 
   const areas = (role === "ADMIN" || role === "DIRECTOR")
-    ? await prisma.area.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } })
+    ? ((await supabaseAdmin.from("areas").select("id, name").order("name")).data ?? [])
     : [];
 
   return (

@@ -11,8 +11,8 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "Sistema de Reconhecimento",
-    template: "%s | Sistema de Reconhecimento",
+    default: "Newsletter Hub",
+    template: "%s | Newsletter Hub",
   },
   description: "Plataforma corporativa para gestão de elogios, treinamentos e reconhecimento profissional",
   robots: { index: false, follow: false },

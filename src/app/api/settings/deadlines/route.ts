@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import { getDeadlines, upsertDeadline } from "@/services/deadline.service";
-import type { DeadlineType } from "@prisma/client";
+import type { DeadlineType } from "@/lib/supabase/types";
 
 export async function GET() {
   const session = await auth();

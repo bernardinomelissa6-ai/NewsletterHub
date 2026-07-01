@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth/session";
-import { prisma } from "@/lib/db/prisma";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { AreaForm } from "@/components/areas/AreaForm";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -10,20 +10,12 @@ export default async function EditAreaPage({ params }: { params: Promise<{ id: s
   await requireRole("ADMIN");
   const { id } = await params;
 
-  const area = await prisma.area.findUnique({ where: { id } });
+  const { data: area } = await supabaseAdmin.from("areas").select("*").eq("id", id).single();
   if (!area) notFound();
 
-  const [managers, directors] = await Promise.all([
-    prisma.user.findMany({
-      where: { role: { in: ["MANAGER", "ADMIN"] }, isActive: true },
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-    prisma.user.findMany({
-      where: { role: "DIRECTOR", isActive: true },
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
+  const [{ data: managers }, { data: directors }] = await Promise.all([
+    supabaseAdmin.from("users").select("id, name").in("role", ["MANAGER", "ADMIN"]).eq("is_active", true).order("name"),
+    supabaseAdmin.from("users").select("id, name").eq("role", "DIRECTOR").eq("is_active", true).order("name"),
   ]);
 
   return (
@@ -33,13 +25,13 @@ export default async function EditAreaPage({ params }: { params: Promise<{ id: s
         <p className="text-muted-foreground text-sm mt-1">{area.name}</p>
       </div>
       <AreaForm
-        managers={managers}
-        directors={directors}
+        managers={managers ?? []}
+        directors={directors ?? []}
         areaId={area.id}
         defaultValues={{
           name: area.name,
-          managerId: area.managerId ?? "",
-          directorId: area.directorId ?? "",
+          managerId: area.manager_id ?? "",
+          directorId: area.director_id ?? "",
         }}
       />
     </div>

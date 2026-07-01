@@ -14,7 +14,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { createComplimentSchema, type CreateComplimentInput } from "@/lib/validations/compliment.schema";
 import { Loader2, Paperclip, X } from "lucide-react";
 
-const BRANCHES = ["Automóvel", "Vida", "Saúde", "Residencial", "Patrimonial", "Engenharia", "Transportes", "Responsabilidade Civil", "Outros"];
+interface Branch {
+  id: string;
+  name: string;
+}
 
 interface Collaborator {
   id: string;
@@ -24,15 +27,17 @@ interface Collaborator {
 
 interface Props {
   collaborators: Collaborator[];
+  branches: Branch[];
   defaultCollaboratorId?: string;
   complimentId?: string;
   defaultValues?: Partial<CreateComplimentInput>;
 }
 
-export function ComplimentForm({ collaborators, defaultCollaboratorId, complimentId, defaultValues }: Props) {
+export function ComplimentForm({ collaborators, branches, defaultCollaboratorId, complimentId, defaultValues }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<CreateComplimentInput>({
     resolver: zodResolver(createComplimentSchema),
@@ -45,11 +50,13 @@ export function ComplimentForm({ collaborators, defaultCollaboratorId, complimen
   const collaboratorId = watch("collaboratorId");
 
   async function onSubmit(data: CreateComplimentInput) {
+    if (!file) { setFileError("Anexo obrigatório (PDF ou e-mail)"); return; }
+    setFileError(null);
     setLoading(true);
     try {
       const formData = new FormData();
       Object.entries(data).forEach(([k, v]) => formData.append(k, v as string));
-      if (file) formData.append("attachment", file);
+      formData.append("attachment", file);
 
       const url = complimentId ? `/api/compliments/${complimentId}` : "/api/compliments";
       const method = complimentId ? "PUT" : "POST";
@@ -90,7 +97,7 @@ export function ComplimentForm({ collaborators, defaultCollaboratorId, complimen
                   <SelectValue placeholder="Selecione o ramo" />
                 </SelectTrigger>
                 <SelectContent>
-                  {BRANCHES.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                  {branches.map((b) => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
                 </SelectContent>
               </Select>
               {errors.branch && <p className="text-xs text-destructive">{errors.branch.message}</p>}
@@ -131,8 +138,8 @@ export function ComplimentForm({ collaborators, defaultCollaboratorId, complimen
           </div>
 
           <div className="space-y-2">
-            <Label>Anexo (opcional)</Label>
-            <div className="border-2 border-dashed border-border rounded-lg p-4 text-center">
+            <Label>Anexo *</Label>
+            <div className={`border-2 border-dashed rounded-lg p-4 text-center ${fileError ? "border-destructive" : "border-border"}`}>
               {file ? (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm">
@@ -147,17 +154,18 @@ export function ComplimentForm({ collaborators, defaultCollaboratorId, complimen
               ) : (
                 <label className="cursor-pointer">
                   <Paperclip className="w-6 h-6 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">Clique para anexar um arquivo</p>
-                  <p className="text-xs text-muted-foreground mt-1">PDF, DOC, DOCX, PNG, JPG, JPEG • Máx. 10MB</p>
+                  <p className="text-sm text-muted-foreground">Clique para anexar o e-mail ou PDF do elogio</p>
+                  <p className="text-xs text-muted-foreground mt-1">PDF, EML, MSG • Máx. 10MB</p>
                   <input
                     type="file"
                     className="hidden"
-                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
-                    onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                    accept=".pdf,.eml,.msg,application/pdf,message/rfc822,application/vnd.ms-outlook"
+                    onChange={(e) => { setFile(e.target.files?.[0] ?? null); setFileError(null); }}
                   />
                 </label>
               )}
             </div>
+            {fileError && <p className="text-xs text-destructive">{fileError}</p>}
           </div>
 
           <div className="flex gap-3 pt-2">

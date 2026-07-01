@@ -1,8 +1,15 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
-import { prisma } from "@/lib/db/prisma";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import * as XLSX from "xlsx";
+
+const TYPE_LABELS: Record<string, string> = {
+  TRAINING: "Treinamento",
+  COURSE: "Curso",
+  CONSULTANCY: "Consultoria",
+};
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -15,41 +22,86 @@ export async function GET(req: NextRequest) {
   const quarter = searchParams.get("quarter") ? parseInt(searchParams.get("quarter")!) : undefined;
   const exportFormat = searchParams.get("format") ?? "csv";
 
-  const where: Record<string, unknown> = {};
-  if (year) where.year = year;
-  if (quarter) where.quarter = quarter;
+  let tQuery = supabaseAdmin
+    .from("trainings")
+    .select("*, collaborator:users!trainings_collaborator_id_fkey(name, area:areas(name))")
+    .order("date", { ascending: false });
 
-  const trainings = await prisma.training.findMany({
-    where,
-    orderBy: { date: "desc" },
-    include: {
-      collaborator: { select: { name: true, area: { select: { name: true } } } },
-    },
-  });
+  if (year) tQuery = tQuery.eq("year", year);
+  if (quarter) tQuery = tQuery.eq("quarter", quarter);
 
-  const TYPE_LABELS: Record<string, string> = { TRAINING: "Treinamento", COURSE: "Curso", CONSULTANCY: "Consultoria" };
+  const { data: trainings } = await tQuery;
+  const allTrainings = trainings ?? [];
 
-  if (exportFormat === "csv") {
-    const header = "ID,Nome/Empresa,Colaborador,Área,Tipo,Ramo,Data,Trimestre,Ano\n";
-    const rows = trainings.map((t) => [
-      t.id,
-      `"${t.insured}"`,
-      `"${t.collaborator.name}"`,
-      `"${t.collaborator.area?.name ?? ""}"`,
-      TYPE_LABELS[t.type] ?? t.type,
-      `"${t.branch}"`,
-      format(t.date, "dd/MM/yyyy", { locale: ptBR }),
-      `T${t.quarter}`,
-      t.year,
-    ].join(",")).join("\n");
+  const fileBase = `treinamentos-${year ?? "todos"}${quarter ? `-T${quarter}` : ""}`;
 
-    return new NextResponse(header + rows, {
+  const headers = ["ID", "Nome/Empresa", "Colaborador", "Área", "Tipo", "Ramo", "Data", "Trimestre", "Ano"];
+  const rows = allTrainings.map((t: any) => [
+    t.id,
+    t.insured,
+    t.collaborator?.name ?? "",
+    t.collaborator?.area?.name ?? "",
+    TYPE_LABELS[t.type] ?? t.type,
+    t.branch,
+    format(new Date(t.date), "dd/MM/yyyy", { locale: ptBR }),
+    `T${t.quarter}`,
+    t.year,
+  ]);
+
+  if (exportFormat === "xlsx") {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    XLSX.utils.book_append_sheet(wb, ws, "Treinamentos");
+    const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
+    return new NextResponse(buffer as unknown as BodyInit, {
       headers: {
-        "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="treinamentos-${year ?? "todos"}${quarter ? `-T${quarter}` : ""}.csv"`,
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="${fileBase}.xlsx"`,
       },
     });
   }
 
-  return NextResponse.json(trainings);
+  if (exportFormat === "pdf") {
+    const { jsPDF } = await import("jspdf");
+    const autoTable = (await import("jspdf-autotable")).default;
+    const doc = new jsPDF({ orientation: "landscape" });
+    doc.setFontSize(14);
+    doc.text("Relatório de Treinamentos", 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Período: ${year ?? "Todos os anos"}${quarter ? ` | T${quarter}` : ""}`, 14, 22);
+    autoTable(doc, {
+      startY: 28,
+      head: [["Nome/Empresa", "Colaborador", "Área", "Tipo", "Ramo", "Data", "T", "Ano"]],
+      body: allTrainings.map((t: any) => [
+        t.insured,
+        t.collaborator?.name ?? "",
+        t.collaborator?.area?.name ?? "",
+        TYPE_LABELS[t.type] ?? t.type,
+        t.branch,
+        format(new Date(t.date), "dd/MM/yyyy", { locale: ptBR }),
+        `T${t.quarter}`,
+        t.year,
+      ]),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [72, 8, 111] },
+    });
+    const buffer = Buffer.from(doc.output("arraybuffer"));
+    return new NextResponse(buffer as unknown as BodyInit, {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${fileBase}.pdf"`,
+      },
+    });
+  }
+
+  // CSV (default)
+  const csvHeader = headers.join(",") + "\n";
+  const csvRows = rows.map((r) => r.map((v) => (typeof v === "string" && v.includes(",") ? `"${v}"` : v)).join(",")).join("\n");
+  return new NextResponse(csvHeader + csvRows, {
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${fileBase}.csv"`,
+    },
+  });
 }
+

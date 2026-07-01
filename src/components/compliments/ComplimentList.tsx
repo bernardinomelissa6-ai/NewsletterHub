@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Eye, Search, Filter, Star, Paperclip } from "lucide-react";
 import { MEDAL_LABELS, MEDAL_COLORS } from "@/lib/utils/ranking";
-import type { MedalType, ComplimentStatus } from "@prisma/client";
+import type { MedalType, ComplimentStatus } from "@/lib/supabase/types";
 
 const STATUS_CONFIG: Record<ComplimentStatus, { label: string; className: string }> = {
   PENDENTE_APROVACAO: { label: "Pend. Aprovação", className: "status-pending" },
@@ -24,14 +24,14 @@ const STATUS_CONFIG: Record<ComplimentStatus, { label: string; className: string
 interface Compliment {
   id: string;
   insured: string;
-  receivedAt: string;
+  received_at: string;
   branch: string;
   reason: string;
   status: ComplimentStatus;
-  attachmentUrl: string | null;
+  attachment_url: string | null;
   quarter: number;
   year: number;
-  createdAt: string;
+  created_at: string;
   collaborator: { id: string; name: string };
   evaluations: Array<{ medal: MedalType }>;
 }
@@ -156,8 +156,8 @@ export function ComplimentList({ initialData, userRole, userId }: Props) {
                       <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                         <span>{c.collaborator.name}</span>
                         <span>•</span>
-                        <span>{format(new Date(c.receivedAt), "dd/MM/yyyy", { locale: ptBR })}</span>
-                        {c.attachmentUrl && (
+                        <span>{format(new Date(c.received_at), "dd/MM/yyyy", { locale: ptBR })}</span>
+                        {c.attachment_url && (
                           <>
                             <span>•</span>
                             <span className="flex items-center gap-1"><Paperclip className="w-3 h-3" /> Anexo</span>

@@ -28,7 +28,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/compliments/pending-approval", label: "Aprovar Elogios", icon: ClipboardList, roles: ["MANAGER", "ADMIN"] },
   { href: "/compliments/pending-evaluation", label: "Avaliar Elogios", icon: Shield, roles: ["DIRECTOR", "ADMIN"] },
   { href: "/trainings", label: "Treinamentos", icon: BookOpen },
-  { href: "/rankings/collaborators", label: "Ranking Colaboradores", icon: Trophy },
+  { href: "/rankings/collaborators", label: "Ranking Colaboradores", icon: Trophy, roles: ["MANAGER", "DIRECTOR", "ADMIN"] },
   { href: "/rankings/areas", label: "Ranking Áreas", icon: Building2, roles: ["DIRECTOR", "ADMIN"] },
   { href: "/rankings/teams", label: "Ranking da Equipe", icon: Users, roles: ["MANAGER"] },
   { href: "/notifications", label: "Notificações", icon: Bell },
@@ -41,6 +41,7 @@ const ADMIN_ITEMS: NavItem[] = [
   { href: "/reports", label: "Relatórios", icon: FileText },
   { href: "/audit", label: "Auditoria", icon: ClipboardList },
   { href: "/settings/deadlines", label: "Prazos", icon: Clock },
+  { href: "/settings/branches", label: "Ramos", icon: Building2 },
 ];
 
 interface SidebarProps {
@@ -86,8 +87,8 @@ export function Sidebar({ userRole, unreadCount = 0 }: SidebarProps) {
         </div>
         {!collapsed && (
           <div className="overflow-hidden">
-            <p className="text-sm font-bold text-foreground leading-tight">Sistema de</p>
-            <p className="text-xs text-primary font-semibold">Reconhecimento</p>
+            <p className="text-sm font-bold text-foreground leading-tight">Newsletter</p>
+            <p className="text-xs text-primary font-semibold">Hub</p>
           </div>
         )}
       </div>

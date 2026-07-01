@@ -1,4 +1,4 @@
-import type { Role } from "@prisma/client";
+﻿import type { Role } from "@/lib/supabase/types";
 
 export const ROLE_LABELS: Record<Role, string> = {
   COLLABORATOR: "Colaborador",
@@ -49,3 +49,4 @@ export function canViewAudit(role: Role | string): boolean {
 export function canExportReports(role: Role | string): boolean {
   return role === "ADMIN" || role === "DIRECTOR" || role === "MANAGER";
 }
+

@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth/session";
-import { prisma } from "@/lib/db/prisma";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { UserForm } from "@/components/users/UserForm";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -10,10 +10,10 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
   await requireRole("ADMIN");
   const { id } = await params;
 
-  const user = await prisma.user.findUnique({ where: { id }, select: { id: true, name: true, email: true, role: true, areaId: true } });
+  const { data: user } = await supabaseAdmin.from("users").select("id, name, email, role, area_id").eq("id", id).single();
   if (!user) notFound();
 
-  const areas = await prisma.area.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } });
+  const { data: areas } = await supabaseAdmin.from("areas").select("id, name").order("name");
 
   return (
     <div className="max-w-xl">
@@ -22,9 +22,9 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
         <p className="text-muted-foreground text-sm mt-1">{user.name}</p>
       </div>
       <UserForm
-        areas={areas}
+        areas={areas ?? []}
         userId={user.id}
-        defaultValues={{ name: user.name, email: user.email, role: user.role, areaId: user.areaId ?? "" }}
+        defaultValues={{ name: user.name, email: user.email, role: user.role, areaId: user.area_id ?? "" }}
       />
     </div>
   );

@@ -1,17 +1,18 @@
 import { auth } from "@/lib/auth/auth";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 
-const PUBLIC_ROUTES = ["/login", "/register", "/verify-email", "/forgot-password"];
-const AUTH_ROUTES = ["/login", "/register", "/verify-email", "/forgot-password"];
+const PUBLIC_ROUTES = ["/login", "/register", "/verify-email", "/forgot-password", "/setup"];
+const AUTH_ROUTES = ["/login", "/register", "/verify-email", "/forgot-password", "/setup"];
 
 const ROLE_ROUTES: Record<string, string[]> = {
   "/users": ["ADMIN"],
   "/areas": ["ADMIN"],
   "/audit": ["ADMIN"],
   "/settings/deadlines": ["ADMIN"],
+  "/settings/branches": ["ADMIN"],
   "/compliments/pending-approval": ["MANAGER", "ADMIN"],
   "/compliments/pending-evaluation": ["DIRECTOR", "ADMIN"],
+  "/rankings/collaborators": ["MANAGER", "DIRECTOR", "ADMIN"],
   "/rankings/teams": ["MANAGER"],
   "/reports": ["ADMIN", "DIRECTOR", "MANAGER"],
 };

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ComplimentStatus, MedalType } from "@prisma/client";
+import { ComplimentStatus, MedalType } from "@/lib/supabase/types";
 
 export const createComplimentSchema = z.object({
   insured: z.string().min(2, "Nome do segurado obrigatório").max(300),

@@ -1,5 +1,6 @@
 import { requireAuth } from "@/lib/auth/session";
 import { getComplimentById } from "@/services/compliment.service";
+import { getBranches } from "@/services/branch.service";
 import { ComplimentForm } from "@/components/compliments/ComplimentForm";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
@@ -22,6 +23,7 @@ export default async function EditComplimentPage({ params }: { params: Promise<{
 
   const collaborators = [{ id: coll?.id, name: coll?.name, area: coll?.area }];
   const receivedAt = (compliment as any).received_at ?? (compliment as any).receivedAt;
+  const branches = await getBranches(true);
 
   return (
     <div className="max-w-2xl">
@@ -33,6 +35,7 @@ export default async function EditComplimentPage({ params }: { params: Promise<{
       </div>
       <ComplimentForm
         collaborators={collaborators as any}
+        branches={branches}
         complimentId={id}
         defaultValues={{
           insured: compliment.insured,

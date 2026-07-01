@@ -18,7 +18,7 @@ export default async function AuditPage() {
           Registro imutável de todas as ações realizadas no sistema
         </p>
       </div>
-      <AuditLogTable initialData={result} />
+      <AuditLogTable initialData={result as any} />
     </div>
   );
 }

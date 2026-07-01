@@ -29,7 +29,7 @@ export default async function TrainingsPage() {
           </Link>
         </Button>
       </div>
-      <TrainingList initialData={result} userRole={role} />
+      <TrainingList initialData={result as any} userRole={role} />
     </div>
   );
 }

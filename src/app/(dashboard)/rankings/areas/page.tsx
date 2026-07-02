@@ -8,8 +8,9 @@ export const metadata: Metadata = { title: "Ranking por Área" };
 export default async function AreasRankingPage() {
   await requireRole("ADMIN", "DIRECTOR", "DIRETOR_CENTRAL");
 
-  const currentYear = new Date().getFullYear();
-  const currentQuarter = Math.ceil((new Date().getMonth() + 1) / 3);
+  const now = new Date();
+  const currentYear = now.getUTCFullYear();
+  const currentQuarter = Math.ceil((now.getUTCMonth() + 1) / 3);
 
   const ranking = await getAreaRanking({ year: currentYear, quarter: currentQuarter });
 

@@ -10,8 +10,9 @@ export default async function CollaboratorsRankingPage() {
   const session = await requireAuth();
   const { role, id: userId } = session.user;
 
-  const currentYear = new Date().getFullYear();
-  const currentQuarter = Math.ceil((new Date().getMonth() + 1) / 3);
+  const now = new Date();
+  const currentYear = now.getUTCFullYear();
+  const currentQuarter = Math.ceil((now.getUTCMonth() + 1) / 3);
 
   const filter: { year: number; quarter: number; areaId?: string } = { year: currentYear, quarter: currentQuarter };
 

@@ -26,7 +26,7 @@ export async function getCollaboratorRanking(filter: RankingFilter = {}): Promis
 
   let complimentsQuery = supabaseAdmin
     .from("compliments")
-    .select("collaborator_id, evaluations:compliment_evaluations(medal)")
+    .select("collaborator_id, final_medal")
     .eq("status", "AVALIADO")
     .in("collaborator_id", userIds);
 
@@ -47,8 +47,9 @@ export async function getCollaboratorRanking(filter: RankingFilter = {}): Promis
   const trainingsByUser = new Map<string, number>();
 
   for (const c of compliments ?? []) {
+    if (!c.final_medal) continue;
     const evals = medalsByUser.get(c.collaborator_id) ?? [];
-    for (const e of (c.evaluations as { medal: string }[])) evals.push(e);
+    evals.push({ medal: c.final_medal });
     medalsByUser.set(c.collaborator_id, evals);
   }
   for (const t of trainings ?? []) {
@@ -135,16 +136,16 @@ export async function getUserScore(userId: string, filter: RankingFilter = {}) {
 
   let query = supabaseAdmin
     .from("compliments")
-    .select("evaluations:compliment_evaluations(medal)")
+    .select("final_medal")
     .eq("status", "AVALIADO")
-    .eq("collaborator_id", userId);
+    .or(`collaborator_id.eq.${userId},submitted_by_id.eq.${userId}`);
 
   if (year) query = query.eq("year", year);
   if (quarter) query = query.eq("quarter", quarter);
 
   const { data: compliments } = await query;
 
-  const medals = (compliments ?? []).flatMap((c) => (c.evaluations as { medal: string }[]));
+  const medals = (compliments ?? []).filter((c) => c.final_medal).map((c) => ({ medal: c.final_medal as string }));
   const score = medals.reduce((acc, { medal }) => acc + MEDAL_POINTS[medal as MedalType], 0);
   const medalCounts = { SPECIAL: 0, GOLD: 0, SILVER: 0, BRONZE: 0 };
   for (const { medal } of medals) medalCounts[medal as keyof typeof medalCounts]++;

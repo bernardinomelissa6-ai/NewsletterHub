@@ -6,7 +6,7 @@ export async function getCollaboratorDashboard(userId: string, year: number, qua
 
   const [scoreData, complimentsData, trainingsData, rankingData] = await Promise.all([
     getUserScore(userId, filter),
-    supabaseAdmin.from("compliments").select("status").eq("collaborator_id", userId).eq("year", year),
+    supabaseAdmin.from("compliments").select("status").or(`collaborator_id.eq.${userId},submitted_by_id.eq.${userId}`).eq("year", year),
     supabaseAdmin.from("trainings").select("type").eq("collaborator_id", userId).eq("year", year),
     getCollaboratorRanking(filter),
   ]);

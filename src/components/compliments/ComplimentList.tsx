@@ -15,7 +15,7 @@ import type { MedalType, ComplimentStatus } from "@/lib/supabase/types";
 
 const STATUS_CONFIG: Record<ComplimentStatus, { label: string; className: string }> = {
   PENDENTE_APROVACAO: { label: "Pend. Aprovação", className: "status-pending" },
-  PENDENTE_AVALIACAO: { label: "Pend. Avaliação", className: "bg-purple-100 text-purple-800 border-purple-200" },
+  PENDENTE_AVALIACAO: { label: "Pend. Avaliação", className: "bg-red-100 text-red-800 border-red-200" },
   REJEITADO: { label: "Rejeitado", className: "status-rejected" },
   DEVOLVIDO_PARA_AJUSTE: { label: "Devolvido", className: "status-returned" },
   AVALIADO: { label: "Avaliado", className: "status-evaluated" },

@@ -26,7 +26,7 @@ interface Compliment {
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   PENDENTE_APROVACAO: { label: "Aguardando Aprovação", color: "bg-yellow-50 text-yellow-700 border-yellow-200" },
-  PENDENTE_AVALIACAO: { label: "Em Avaliação", color: "bg-blue-50 text-blue-700 border-blue-200" },
+  PENDENTE_AVALIACAO: { label: "Em Avaliação", color: "bg-red-50 text-red-700 border-red-200" },
   DEVOLVIDO_PARA_AJUSTE: { label: "Devolvido para Ajuste", color: "bg-orange-50 text-orange-700 border-orange-200" },
   REJEITADO: { label: "Não Aprovado", color: "bg-red-50 text-red-700 border-red-200" },
   AVALIADO: { label: "Avaliado", color: "bg-green-50 text-green-700 border-green-200" },

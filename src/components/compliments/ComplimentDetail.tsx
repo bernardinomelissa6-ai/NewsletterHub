@@ -19,7 +19,7 @@ const STATUS_LABELS: Record<ComplimentStatus, string> = {
 
 const STATUS_CLASSES: Record<ComplimentStatus, string> = {
   PENDENTE_APROVACAO: "status-pending",
-  PENDENTE_AVALIACAO: "bg-purple-100 text-purple-800 border-purple-200",
+  PENDENTE_AVALIACAO: "bg-red-100 text-red-800 border-red-200",
   REJEITADO: "status-rejected",
   DEVOLVIDO_PARA_AJUSTE: "status-returned",
   AVALIADO: "status-evaluated",

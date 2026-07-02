@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils/cn";
 import {
   LayoutDashboard, Star, BookOpen, Trophy, Users, Building2,
   ClipboardList, FileText, Bell, Settings, Shield, Clock,
-  ChevronLeft, ChevronRight, Award,
+  ChevronLeft, ChevronRight, Award, History,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -28,6 +28,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/compliments", label: "Elogios", icon: Star },
   { href: "/compliments/pending-approval", label: "Aprovar Elogios", icon: ClipboardList, roles: ["MANAGER", "ADMIN", "DIRETOR_CENTRAL"] },
   { href: "/compliments/pending-evaluation", label: "Avaliar Elogios", icon: Shield, roles: ["DIRECTOR", "ADMIN", "DIRETOR_CENTRAL"] },
+  { href: "/minhas-avaliacoes", label: "Minhas Avaliações", icon: History, roles: ["DIRECTOR", "DIRETOR_CENTRAL"] },
   { href: "/trainings", label: "Treinamentos", icon: BookOpen },
   { href: "/rankings/collaborators", label: "Ranking Colaboradores", icon: Trophy, roles: ["MANAGER", "DIRECTOR", "ADMIN", "DIRETOR_CENTRAL"] },
   { href: "/rankings/areas", label: "Ranking Áreas", icon: Building2, roles: ["DIRECTOR", "ADMIN", "DIRETOR_CENTRAL"] },

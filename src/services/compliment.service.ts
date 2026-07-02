@@ -232,23 +232,62 @@ export async function returnCompliment(
 const CENTRAL_ROLES = ["DIRETOR_CENTRAL", "ADMIN"] as const;
 const isCentral = (role: string) => (CENTRAL_ROLES as readonly string[]).includes(role);
 
-export async function getPendingEvaluationsForCentralDirector(centralDirectorId: string) {
-  const { data } = await supabaseAdmin
+export async function getPendingEvaluationsForCentralDirector(_centralDirectorId: string) {
+  const { data: rawCompliments } = await supabaseAdmin
     .from("compliments")
-    .select(`
-      id, insured, received_at, branch, reason, status, quarter, year, created_at, attachment_url, collaborator_id,
-      evaluations:compliment_evaluations(director_id, medal, justification, director:users!director_id(id, name, role)),
-      collaborator:users!collaborator_id(id, name, area:areas(name)),
-      approvals:compliment_approvals(action, observation, manager:users!manager_id(name))
-    `)
+    .select("id, insured, received_at, branch, reason, status, quarter, year, created_at, attachment_url, collaborator_id, submitted_by_id")
     .eq("status", "PENDENTE_AVALIACAO")
     .order("created_at");
 
-  return (data ?? []).filter((c: any) => {
-    const evals = c.evaluations ?? [];
-    const regularCount = evals.filter((e: any) => e.director?.role === "DIRECTOR").length;
-    const alreadyCentral = evals.some((e: any) => isCentral(e.director?.role ?? ""));
-    return regularCount >= 2 && !alreadyCentral;
+  if (!rawCompliments || rawCompliments.length === 0) return [];
+
+  const complimentIds = rawCompliments.map((c) => c.id);
+  const allUserIds = [...new Set([
+    ...rawCompliments.map((c: any) => c.collaborator_id),
+    ...rawCompliments.map((c: any) => c.submitted_by_id),
+  ].filter(Boolean))];
+
+  const [{ data: usersRaw }, { data: evaluationsData }, { data: approvalsData }] = await Promise.all([
+    allUserIds.length > 0 ? supabaseAdmin.from("users").select("id, name, area_id").in("id", allUserIds) : Promise.resolve({ data: [] }),
+    supabaseAdmin.from("compliment_evaluations").select("compliment_id, medal, justification, director_id").in("compliment_id", complimentIds),
+    supabaseAdmin.from("compliment_approvals").select("compliment_id, action, observation, manager_id").in("compliment_id", complimentIds),
+  ]);
+
+  const directorIds = [...new Set((evaluationsData ?? []).map((e: any) => e.director_id).filter(Boolean))];
+  const managerIds = [...new Set((approvalsData ?? []).map((a: any) => a.manager_id).filter(Boolean))];
+  const areaIds = [...new Set((usersRaw ?? []).map((u: any) => u.area_id).filter(Boolean))];
+
+  const [{ data: directorsData }, { data: managersData }, { data: areasData }] = await Promise.all([
+    directorIds.length > 0 ? supabaseAdmin.from("users").select("id, name, role").in("id", directorIds) : Promise.resolve({ data: [] }),
+    managerIds.length > 0 ? supabaseAdmin.from("users").select("id, name").in("id", managerIds) : Promise.resolve({ data: [] }),
+    areaIds.length > 0 ? supabaseAdmin.from("areas").select("id, name").in("id", areaIds) : Promise.resolve({ data: [] }),
+  ]);
+
+  const directorMap = new Map((directorsData ?? []).map((u: any) => [u.id, u]));
+  const managerMap = new Map((managersData ?? []).map((u: any) => [u.id, u]));
+  const areaMap = new Map((areasData ?? []).map((a: any) => [a.id, a.name]));
+  const userMap = new Map((usersRaw ?? []).map((u: any) => [u.id, {
+    id: u.id, name: u.name,
+    area: u.area_id ? { name: areaMap.get(u.area_id) ?? "" } : null,
+  }]));
+
+  const all = rawCompliments.map((c: any) => ({
+    ...c,
+    collaborator: userMap.get(c.collaborator_id) ?? userMap.get(c.submitted_by_id) ?? { id: null, name: "—", area: null },
+    approvals: (approvalsData ?? [])
+      .filter((a: any) => a.compliment_id === c.id)
+      .map((a: any) => ({ ...a, manager: managerMap.get(a.manager_id) ?? { name: "—" } })),
+    evaluations: (evaluationsData ?? [])
+      .filter((e: any) => e.compliment_id === c.id)
+      .map((e: any) => ({ ...e, director: directorMap.get(e.director_id) ?? { name: "—", role: "DIRECTOR" } })),
+  }));
+
+  // Mostra apenas elogios com pelo menos 1 diretor regular avaliando e sem avaliação central ainda
+  return all.filter((c: any) => {
+    const evals: any[] = c.evaluations;
+    const regularCount = evals.filter((e) => e.director?.role === "DIRECTOR").length;
+    const alreadyCentral = evals.some((e) => isCentral(e.director?.role ?? ""));
+    return regularCount >= 1 && !alreadyCentral;
   });
 }
 
@@ -276,10 +315,10 @@ export async function evaluateCompliment(
   if (myEval) throw new Error("Você já avaliou este elogio");
 
   if (isCentral(directorRole)) {
-    if (regularEvals.length < 2) throw new Error("Aguardando avaliação dos 2 Diretores antes do Diretor Central");
+    if (regularEvals.length < 1) throw new Error("Aguardando avaliação de pelo menos 1 Diretor antes do Diretor Central");
     if (centralEvals.length > 0) throw new Error("O Diretor Central já avaliou este elogio");
   } else {
-    if (regularEvals.length >= 2) throw new Error("Este elogio já possui as 2 avaliações de Diretor necessárias");
+    if (centralEvals.length > 0) throw new Error("O Diretor Central já finalizou a avaliação deste elogio");
   }
 
   await supabaseAdmin.from("compliment_evaluations").insert({
@@ -345,7 +384,7 @@ export async function reevaluateCompliment(
   const centralEval = evalList.find((e) => e.isCentralDirector);
   const regularEvals = evalList.filter((e) => !e.isCentralDirector);
 
-  if (centralEval && regularEvals.length >= 2) {
+  if (centralEval && regularEvals.length >= 1) {
     const { score, finalMedal } = calculateFinalMedal(evalList);
     await supabaseAdmin.from("compliments").update({ final_medal: finalMedal, evaluation_score: score, updated_at: new Date().toISOString() }).eq("id", id);
     const { data: compliment } = await supabaseAdmin.from("compliments").select("insured, collaborator_id").eq("id", id).single();

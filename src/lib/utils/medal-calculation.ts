@@ -25,7 +25,8 @@ export interface FinalMedalResult {
 }
 
 /**
- * Weighted average: Central Director = 50%, Director 1 = 25%, Director 2 = 25%
+ * Weighted average: Central Director = 50%, all regular Directors collectively = 50%
+ * If multiple directors evaluated, their medals are averaged before applying the 50% weight.
  * Score ranges: 1.00–1.49 = Bronze, 1.50–2.49 = Silver, 2.50–3.49 = Gold, 3.50–4.00 = Special
  */
 export function calculateFinalMedal(evaluations: DirectorEvaluationInput[]): FinalMedalResult {
@@ -33,12 +34,11 @@ export function calculateFinalMedal(evaluations: DirectorEvaluationInput[]): Fin
   const others = evaluations.filter((e) => !e.isCentralDirector);
 
   if (!central) throw new Error("Avaliação do Diretor Central não encontrada");
-  if (others.length < 2) throw new Error("São necessárias avaliações de pelo menos 2 Diretores");
+  if (others.length < 1) throw new Error("É necessária avaliação de pelo menos 1 Diretor");
 
   const centralVal = MEDAL_VALUES[central.medal];
-  const dir1Val = MEDAL_VALUES[others[0].medal];
-  const dir2Val = MEDAL_VALUES[others[1].medal];
+  const avgDirectors = others.reduce((sum, e) => sum + MEDAL_VALUES[e.medal], 0) / others.length;
 
-  const score = Number((centralVal * 0.5 + dir1Val * 0.25 + dir2Val * 0.25).toFixed(2));
+  const score = Number((centralVal * 0.5 + avgDirectors * 0.5).toFixed(2));
   return { score, finalMedal: scoreToMedal(score) };
 }

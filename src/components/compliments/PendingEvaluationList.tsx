@@ -133,9 +133,9 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
                       <span className="text-xs text-muted-foreground">T{c.quarter}/{c.year}</span>
                       <Badge
                         variant="outline"
-                        className={evalCount >= 3 ? "text-green-700 border-green-300 bg-green-50" : "text-orange-700 border-orange-300 bg-orange-50"}
+                        className={evalCount >= 2 ? "text-green-700 border-green-300 bg-green-50" : "text-orange-700 border-orange-300 bg-orange-50"}
                       >
-                        {evalCount}/3 avaliações
+                        {evalCount} avaliação{evalCount !== 1 ? "ões" : ""}
                       </Badge>
                     </div>
                     <h3 className="font-semibold text-base">{c.insured}</h3>
@@ -243,7 +243,7 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
 
                 {evaluations.length > 0 && (
                   <div className="pt-3 border-t space-y-2">
-                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Avaliações ({evaluations.length}/3)</p>
+                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Avaliações ({evaluations.length})</p>
                     {evaluations.map((ev, i) => (
                       <div key={i} className="flex items-center gap-2 text-sm">
                         <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />

@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Novo Elogio" };
 
 export default async function NewComplimentPage() {
   const session = await requireAuth();
-  const { role, id: userId } = session.user;
+  const { role, id: userId, name: userName } = session.user;
 
   let collaborators: any[] = [];
   if (role === "ADMIN" || role === "DIRETOR_CENTRAL") {
@@ -35,7 +35,7 @@ export default async function NewComplimentPage() {
           Registre um elogio recebido de cliente, segurado, parceiro ou corretor
         </p>
       </div>
-      <ComplimentForm collaborators={collaborators} branches={branches} defaultCollaboratorId={defaultCollaboratorId} />
+      <ComplimentForm collaborators={collaborators} branches={branches} defaultCollaboratorId={defaultCollaboratorId} currentUserName={userName ?? ""} />
     </div>
   );
 }

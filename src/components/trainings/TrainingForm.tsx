@@ -29,9 +29,10 @@ interface Collaborator {
 interface Props {
   collaborators: Collaborator[];
   defaultCollaboratorId?: string;
+  currentUserName?: string;
 }
 
-export function TrainingForm({ collaborators, defaultCollaboratorId }: Props) {
+export function TrainingForm({ collaborators, defaultCollaboratorId, currentUserName }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -107,7 +108,7 @@ export function TrainingForm({ collaborators, defaultCollaboratorId }: Props) {
             <Label>Colaborador *</Label>
             {collaborators.length <= 1 ? (
               <Input
-                defaultValue={collaborators[0]?.name ?? ""}
+                defaultValue={collaborators[0]?.name ?? currentUserName ?? ""}
                 placeholder="Nome do colaborador"
               />
             ) : (

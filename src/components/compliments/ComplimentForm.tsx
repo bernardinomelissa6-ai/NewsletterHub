@@ -29,11 +29,12 @@ interface Props {
   collaborators: Collaborator[];
   branches: Branch[];
   defaultCollaboratorId?: string;
+  currentUserName?: string;
   complimentId?: string;
   defaultValues?: Partial<CreateComplimentInput>;
 }
 
-export function ComplimentForm({ collaborators, branches, defaultCollaboratorId, complimentId, defaultValues }: Props) {
+export function ComplimentForm({ collaborators, branches, defaultCollaboratorId, currentUserName, complimentId, defaultValues }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -108,7 +109,7 @@ export function ComplimentForm({ collaborators, branches, defaultCollaboratorId,
             <Label>Colaborador *</Label>
             {collaborators.length <= 1 ? (
               <Input
-                defaultValue={collaborators[0]?.name ?? ""}
+                defaultValue={collaborators[0]?.name ?? currentUserName ?? ""}
                 placeholder="Nome do colaborador"
               />
             ) : (

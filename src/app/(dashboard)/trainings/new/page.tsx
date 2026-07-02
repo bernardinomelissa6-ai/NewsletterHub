@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Novo Treinamento" };
 
 export default async function NewTrainingPage() {
   const session = await requireAuth();
-  const { role, id: userId } = session.user;
+  const { role, id: userId, name: userName } = session.user;
 
   let collaborators: any[] = [];
   if (role === "ADMIN" || role === "DIRETOR_CENTRAL") {
@@ -33,7 +33,7 @@ export default async function NewTrainingPage() {
           Registre um treinamento, curso ou consultoria realizada
         </p>
       </div>
-      <TrainingForm collaborators={collaborators} defaultCollaboratorId={defaultCollaboratorId} />
+      <TrainingForm collaborators={collaborators} defaultCollaboratorId={defaultCollaboratorId} currentUserName={userName ?? ""} />
     </div>
   );
 }

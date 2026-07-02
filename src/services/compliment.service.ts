@@ -146,18 +146,24 @@ export async function getPendingApprovals(managerId: string) {
   const collaboratorIds = (colls ?? []).map((u: any) => u.id);
   if (collaboratorIds.length === 0) return [];
 
-  const { data } = await supabaseAdmin.from("compliments").select(COMPLIMENT_SELECT).eq("status", "PENDENTE_APROVACAO").in("collaborator_id", collaboratorIds).order("created_at");
+  const idList = collaboratorIds.join(",");
+  const { data } = await supabaseAdmin
+    .from("compliments")
+    .select(COMPLIMENT_SELECT)
+    .eq("status", "PENDENTE_APROVACAO")
+    .or(`collaborator_id.in.(${idList}),submitted_by_id.in.(${idList})`)
+    .order("created_at");
   return data ?? [];
 }
 
-export async function getPendingEvaluations(directorId: string) {
-  const { data: areas } = await supabaseAdmin.from("areas").select("id").eq("director_id", directorId);
-  const areaIds = (areas ?? []).map((a: any) => a.id);
-  const { data: colls } = await supabaseAdmin.from("users").select("id").in("area_id", areaIds);
-  const collaboratorIds = (colls ?? []).map((u: any) => u.id);
-  if (collaboratorIds.length === 0) return [];
-
-  const { data } = await supabaseAdmin.from("compliments").select(COMPLIMENT_SELECT).eq("status", "PENDENTE_AVALIACAO").in("collaborator_id", collaboratorIds).order("created_at");
+export async function getPendingEvaluations(_directorId: string) {
+  // Todos os diretores veem todos os elogios pendentes de avaliação
+  // O componente controla quais já foram avaliados por este diretor
+  const { data } = await supabaseAdmin
+    .from("compliments")
+    .select(COMPLIMENT_SELECT)
+    .eq("status", "PENDENTE_AVALIACAO")
+    .order("created_at");
   return data ?? [];
 }
 
@@ -169,7 +175,7 @@ export async function approveCompliment(
   input: ApproveComplimentInput,
   ipAddress?: string
 ) {
-  const { data: previous } = await supabaseAdmin.from("compliments").select("status, insured, collaborator_id").eq("id", id).single();
+  const { data: previous } = await supabaseAdmin.from("compliments").select("status, insured, collaborator_id, submitted_by_id").eq("id", id).single();
   if (!previous || previous.status !== "PENDENTE_APROVACAO") throw new Error("Elogio não está pendente de aprovação");
 
   await supabaseAdmin.from("compliments").update({ status: "PENDENTE_AVALIACAO", updated_at: new Date().toISOString() }).eq("id", id);
@@ -177,9 +183,12 @@ export async function approveCompliment(
 
   await createAuditLog({ userId: managerId, userName: managerName, userRole: managerRole, action: "APPROVE", entityType: "Compliment", entityId: id, previousValue: { status: previous.status }, newValue: { status: "PENDENTE_AVALIACAO" }, ipAddress });
 
-  const { data: collaborator } = await supabaseAdmin.from("users").select("area_id").eq("id", previous.collaborator_id).single();
-  notifyComplimentApproved({ id, insured: previous.insured, collaboratorId: previous.collaborator_id }).catch(console.error);
-  notifyDirectorNewPending({ id, insured: previous.insured, collaboratorId: previous.collaborator_id, areaId: collaborator?.area_id ?? null }).catch(console.error);
+  const resolvedCollaboratorId = previous.collaborator_id ?? previous.submitted_by_id;
+  const { data: collaborator } = resolvedCollaboratorId
+    ? await supabaseAdmin.from("users").select("area_id").eq("id", resolvedCollaboratorId).single()
+    : { data: null };
+  notifyComplimentApproved({ id, insured: previous.insured, collaboratorId: resolvedCollaboratorId }).catch(console.error);
+  notifyDirectorNewPending({ id, insured: previous.insured, collaboratorId: resolvedCollaboratorId, areaId: collaborator?.area_id ?? null }).catch(console.error);
 }
 
 export async function rejectCompliment(

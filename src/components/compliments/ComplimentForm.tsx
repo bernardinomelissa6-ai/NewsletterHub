@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -64,15 +64,17 @@ export function ComplimentForm({ collaborators, branches, defaultCollaboratorNam
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
 
-  // Select (multi-collaborator): use UUID so the API skips the name-lookup fallback
-  const defaultSelectValue = defaultCollaboratorId ?? collaborators[0]?.id ?? "";
-  // Input (single collaborator / COLLABORATOR role): keep name-based value
-  const defaultInputValue = defaultCollaboratorName ?? collaborators[0]?.name ?? currentUserName ?? "";
+  const isMultiCollaborator = collaborators.length > 1;
 
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<CreateComplimentInput>({
+  // For single-collaborator (COLLABORATOR role): pre-fill with their name
+  const singleDefaultValue = defaultCollaboratorName ?? collaborators[0]?.name ?? currentUserName ?? "";
+  // For multi-collaborator Select: use ID if explicitly provided, otherwise empty (show placeholder)
+  const multiDefaultValue = defaultCollaboratorId ?? "";
+
+  const { register, handleSubmit, control, setValue, formState: { errors } } = useForm<CreateComplimentInput>({
     resolver: zodResolver(createComplimentSchema),
     defaultValues: {
-      collaboratorId: collaborators.length > 1 ? defaultSelectValue : defaultInputValue,
+      collaboratorId: isMultiCollaborator ? multiDefaultValue : singleDefaultValue,
       ...defaultValues,
     },
   });
@@ -147,36 +149,46 @@ export function ComplimentForm({ collaborators, branches, defaultCollaboratorNam
             </div>
             <div className="space-y-2">
               <Label>Ramo *</Label>
-              <Select onValueChange={(v) => setValue("branch", v)} defaultValue={defaultValues?.branch}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o ramo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {branches.map((b) => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Controller
+                name="branch"
+                control={control}
+                defaultValue={defaultValues?.branch ?? ""}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o ramo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches.map((b) => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
               {errors.branch && <p className="text-xs text-destructive">{errors.branch.message}</p>}
             </div>
           </div>
 
           <div className="space-y-2">
             <Label>Colaborador *</Label>
-            {collaborators.length > 1 ? (
-              <Select
-                onValueChange={(v) => setValue("collaboratorId", v)}
-                defaultValue={defaultSelectValue}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o colaborador" />
-                </SelectTrigger>
-                <SelectContent>
-                  {collaborators.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name} {c.area ? `(${c.area.name})` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {isMultiCollaborator ? (
+              <Controller
+                name="collaboratorId"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o colaborador" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {collaborators.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name} {c.area ? `(${c.area.name})` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             ) : (
               <Input
                 placeholder="Nome do colaborador"

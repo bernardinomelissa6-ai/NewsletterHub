@@ -41,7 +41,7 @@ export default async function NewComplimentPage() {
           Registre um elogio recebido de cliente, segurado, parceiro ou corretor
         </p>
       </div>
-      <ComplimentForm collaborators={collaborators} branches={branches} defaultCollaboratorName={collaborators[0]?.name ?? userName ?? ""} defaultCollaboratorId={collaborators[0]?.id} currentUserName={userName ?? ""} />
+      <ComplimentForm collaborators={collaborators} branches={branches} currentUserName={userName ?? ""} />
     </div>
   );
 }

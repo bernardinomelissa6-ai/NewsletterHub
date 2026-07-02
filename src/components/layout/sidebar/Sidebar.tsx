@@ -71,8 +71,17 @@ export function Sidebar({ userRole, unreadCount = 0 }: SidebarProps) {
     localStorage.setItem("sidebar-collapsed", String(next));
   };
 
-  const isActive = (href: string) =>
-    href === "/dashboard" ? pathname === href : pathname.startsWith(href);
+  const allNavHrefs = [...NAV_ITEMS, ...ADMIN_ITEMS, ...DIRETOR_CENTRAL_ITEMS].map((i) => i.href);
+
+  const isActive = (href: string) => {
+    if (!pathname.startsWith(href)) return false;
+    if (href === "/dashboard") return pathname === href;
+    // If a more specific nav item also matches the current path, this one is not active
+    const hasMoreSpecificMatch = allNavHrefs.some(
+      (other) => other !== href && other.startsWith(href + "/") && pathname.startsWith(other)
+    );
+    return !hasMoreSpecificMatch;
+  };
 
   const visibleNav = NAV_ITEMS.filter(
     (item) => !item.roles || item.roles.includes(userRole)

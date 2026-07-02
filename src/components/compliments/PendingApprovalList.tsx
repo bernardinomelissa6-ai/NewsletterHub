@@ -16,10 +16,10 @@ import { Check, X, RotateCcw, User, Calendar, Tag, FileText, Loader2 } from "luc
 interface Compliment {
   id: string;
   insured: string;
-  receivedAt: string;
+  received_at: string;
   branch: string;
   reason: string;
-  attachmentUrl: string | null;
+  attachment_url: string | null;
   quarter: number;
   year: number;
   collaborator: { id: string; name: string; area?: { name: string } | null };
@@ -103,8 +103,8 @@ export function PendingApprovalList({ compliments }: { compliments: Compliment[]
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1"><User className="w-3 h-3" /> {c.collaborator.name}</span>
                     {c.collaborator.area && <span className="flex items-center gap-1"><Tag className="w-3 h-3" /> {c.collaborator.area.name}</span>}
-                    <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {format(new Date(c.receivedAt), "dd/MM/yyyy", { locale: ptBR })}</span>
-                    {c.attachmentUrl && <span className="flex items-center gap-1"><FileText className="w-3 h-3" /> Anexo disponível</span>}
+                    <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {format(new Date(c.received_at), "dd/MM/yyyy", { locale: ptBR })}</span>
+                    {c.attachment_url && <span className="flex items-center gap-1"><FileText className="w-3 h-3" /> Anexo disponível</span>}
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 shrink-0">

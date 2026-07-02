@@ -18,7 +18,7 @@ import type { MedalType } from "@/lib/supabase/types";
 interface Compliment {
   id: string;
   insured: string;
-  receivedAt: string;
+  received_at: string;
   branch: string;
   reason: string;
   quarter: number;
@@ -106,7 +106,7 @@ export function PendingEvaluationList({ compliments }: { compliments: Compliment
                     <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{c.reason}</p>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1"><User className="w-3 h-3" /> {c.collaborator.name}</span>
-                      <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {format(new Date(c.receivedAt), "dd/MM/yyyy", { locale: ptBR })}</span>
+                      <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {format(new Date(c.received_at), "dd/MM/yyyy", { locale: ptBR })}</span>
                       {approval?.observation && (
                         <span className="text-green-700">✓ {approval.manager.name}: "{approval.observation}"</span>
                       )}

@@ -34,12 +34,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       if (key !== "attachment") data[key] = value;
     }
 
-    const file = formData.get("attachment") as File | null;
-    if (file && file.size > 0) {
-      const uploaded = await uploadFile(file, "compliments", ALLOWED_COMPLIMENT_TYPES);
-      data.attachmentUrl = uploaded.url;
-      data.attachmentName = uploaded.name;
-      data.attachmentType = uploaded.type;
+    // Direct-upload path: client pre-uploaded the file to Supabase Storage
+    if (!data.attachmentUrl) {
+      const file = formData.get("attachment") as File | null;
+      if (file && file.size > 0) {
+        const uploaded = await uploadFile(file, "compliments", ALLOWED_COMPLIMENT_TYPES);
+        data.attachmentUrl = uploaded.url;
+        data.attachmentName = uploaded.name;
+        data.attachmentType = uploaded.type;
+      }
     }
 
     const ipAddress = req.headers.get("x-forwarded-for") ?? undefined;

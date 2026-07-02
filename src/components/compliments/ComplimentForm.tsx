@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { createComplimentSchema, type CreateComplimentInput } from "@/lib/validations/compliment.schema";
-import { Loader2, Paperclip, X } from "lucide-react";
+import { Loader2, Paperclip, X, Upload } from "lucide-react";
 
 interface Branch {
   id: string;
@@ -34,9 +34,32 @@ interface Props {
   defaultValues?: Partial<CreateComplimentInput>;
 }
 
+async function uploadDirect(file: File, folder: string): Promise<{ url: string; name: string; type: string }> {
+  const presignRes = await fetch("/api/storage/presign", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ filename: file.name, contentType: file.type, fileSize: file.size, folder }),
+  });
+  if (!presignRes.ok) {
+    const err = await presignRes.json();
+    throw new Error(err.error ?? "Erro ao preparar upload");
+  }
+  const { signedUrl, publicUrl } = await presignRes.json();
+
+  const uploadRes = await fetch(signedUrl, {
+    method: "PUT",
+    body: file,
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+  });
+  if (!uploadRes.ok) throw new Error("Falha ao enviar arquivo");
+
+  return { url: publicUrl, name: file.name, type: file.type };
+}
+
 export function ComplimentForm({ collaborators, branches, defaultCollaboratorName, currentUserName, complimentId, defaultValues }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
 
@@ -54,10 +77,34 @@ export function ComplimentForm({ collaborators, branches, defaultCollaboratorNam
     if (!file && !complimentId) { setFileError("Anexo obrigatório (PDF ou e-mail)"); return; }
     setFileError(null);
     setLoading(true);
+
     try {
+      let attachmentUrl: string | undefined;
+      let attachmentName: string | undefined;
+      let attachmentType: string | undefined;
+
+      if (file) {
+        setUploading(true);
+        try {
+          const uploaded = await uploadDirect(file, "compliments");
+          attachmentUrl = uploaded.url;
+          attachmentName = uploaded.name;
+          attachmentType = uploaded.type;
+        } catch (err: any) {
+          toast.error(err.message ?? "Erro ao enviar arquivo");
+          return;
+        } finally {
+          setUploading(false);
+        }
+      }
+
       const formData = new FormData();
       Object.entries(data).forEach(([k, v]) => formData.append(k, v as string));
-      if (file) formData.append("attachment", file);
+      if (attachmentUrl) {
+        formData.append("attachmentUrl", attachmentUrl);
+        formData.append("attachmentName", attachmentName ?? file!.name);
+        formData.append("attachmentType", attachmentType ?? file!.type);
+      }
 
       const url = complimentId ? `/api/compliments/${complimentId}` : "/api/compliments";
       const method = complimentId ? "PUT" : "POST";
@@ -72,8 +119,11 @@ export function ComplimentForm({ collaborators, branches, defaultCollaboratorNam
       router.refresh();
     } finally {
       setLoading(false);
+      setUploading(false);
     }
   }
+
+  const isWorking = loading || uploading;
 
   return (
     <Card className="border-0 shadow-sm">
@@ -153,7 +203,7 @@ export function ComplimentForm({ collaborators, branches, defaultCollaboratorNam
                     <span>{file.name}</span>
                     <span className="text-muted-foreground">({(file.size / 1024 / 1024).toFixed(1)} MB)</span>
                   </div>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => setFile(null)}>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => setFile(null)} disabled={isWorking}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
@@ -161,7 +211,7 @@ export function ComplimentForm({ collaborators, branches, defaultCollaboratorNam
                 <label className="cursor-pointer">
                   <Paperclip className="w-6 h-6 mx-auto text-muted-foreground mb-2" />
                   <p className="text-sm text-muted-foreground">Clique para anexar o e-mail ou PDF do elogio</p>
-                  <p className="text-xs text-muted-foreground mt-1">PDF, EML, MSG • Máx. 10MB</p>
+                  <p className="text-xs text-muted-foreground mt-1">PDF, EML, MSG • Máx. 1GB</p>
                   <input
                     type="file"
                     className="hidden"
@@ -175,11 +225,15 @@ export function ComplimentForm({ collaborators, branches, defaultCollaboratorNam
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={() => router.back()} className="flex-1">
+            <Button type="button" variant="outline" onClick={() => router.back()} className="flex-1" disabled={isWorking}>
               Cancelar
             </Button>
-            <Button type="submit" className="flex-1" disabled={loading}>
-              {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Salvando...</> : complimentId ? "Atualizar Elogio" : "Registrar Elogio"}
+            <Button type="submit" className="flex-1" disabled={isWorking}>
+              {uploading ? (
+                <><Upload className="w-4 h-4 animate-pulse" /> Enviando arquivo...</>
+              ) : loading ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Salvando...</>
+              ) : complimentId ? "Atualizar Elogio" : "Registrar Elogio"}
             </Button>
           </div>
         </form>

@@ -61,12 +61,21 @@ export async function POST(req: NextRequest) {
     let attachmentName: string | undefined;
     let attachmentType: string | undefined;
 
-    const file = formData.get("attachment") as File | null;
-    if (file && file.size > 0) {
-      const uploaded = await uploadFile(file, "compliments", ALLOWED_COMPLIMENT_TYPES);
-      attachmentUrl = uploaded.url;
-      attachmentName = uploaded.name;
-      attachmentType = uploaded.type;
+    // Direct-upload path: client uploaded to Supabase Storage directly and sends URL
+    const preUploadedUrl = formData.get("attachmentUrl") as string | null;
+    if (preUploadedUrl) {
+      attachmentUrl = preUploadedUrl;
+      attachmentName = (formData.get("attachmentName") as string | null) ?? undefined;
+      attachmentType = (formData.get("attachmentType") as string | null) ?? undefined;
+    } else {
+      // Fallback: file in form body (limited to ~4MB on Vercel)
+      const file = formData.get("attachment") as File | null;
+      if (file && file.size > 0) {
+        const uploaded = await uploadFile(file, "compliments", ALLOWED_COMPLIMENT_TYPES);
+        attachmentUrl = uploaded.url;
+        attachmentName = uploaded.name;
+        attachmentType = uploaded.type;
+      }
     }
 
     const ipAddress = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? undefined;

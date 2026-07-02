@@ -80,13 +80,15 @@ export async function createCompliment(
     quarter,
     status: "PENDENTE_APROVACAO",
     updated_at: new Date().toISOString(),
-  }).select("id, insured, collaborator_id, collaborator:users!compliments_collaborator_id_fkey(area_id)").single();
+  }).select("id, insured, collaborator_id").single();
 
   if (error) throw error;
 
   await createAuditLog({ userId: submittedById, userName: submittedByName, userRole: submittedByRole, action: "CREATE", entityType: "Compliment", entityId: compliment.id, newValue: { insured: input.insured, collaboratorId: input.collaboratorId, status: "PENDENTE_APROVACAO" }, ipAddress });
 
-  const areaId = (compliment.collaborator as any)?.area_id ?? null;
+  // Fetch collaborator area separately to avoid FK join failures
+  const { data: collaboratorUser } = await supabaseAdmin.from("users").select("area_id").eq("id", input.collaboratorId).single();
+  const areaId = collaboratorUser?.area_id ?? null;
   notifyManagerNewPending({ id: compliment.id, insured: compliment.insured, collaboratorId: compliment.collaborator_id, areaId }).catch(console.error);
 
   return compliment;

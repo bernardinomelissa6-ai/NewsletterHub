@@ -66,7 +66,6 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
     setSelected(c);
     setMode("detail");
     setMedal("");
-    setJustification("");
     setComment("");
   }
 

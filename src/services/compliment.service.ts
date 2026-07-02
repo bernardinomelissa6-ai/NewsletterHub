@@ -282,12 +282,12 @@ export async function getPendingEvaluationsForCentralDirector(_centralDirectorId
       .map((e: any) => ({ ...e, director: directorMap.get(e.director_id) ?? { name: "—", role: "DIRECTOR" } })),
   }));
 
-  // Mostra apenas elogios com pelo menos 1 diretor regular avaliando e sem avaliação central ainda
+  // Mostra apenas elogios com 2 diretores regulares avaliando e sem avaliação central ainda
   return all.filter((c: any) => {
     const evals: any[] = c.evaluations;
     const regularCount = evals.filter((e) => e.director?.role === "DIRECTOR").length;
     const alreadyCentral = evals.some((e) => isCentral(e.director?.role ?? ""));
-    return regularCount >= 1 && !alreadyCentral;
+    return regularCount >= 2 && !alreadyCentral;
   });
 }
 
@@ -326,9 +326,10 @@ export async function evaluateCompliment(
   if (myEval) throw new Error("Você já avaliou este elogio");
 
   if (isCentral(directorRole)) {
-    if (regularEvals.length < 1) throw new Error("Aguardando avaliação de pelo menos 1 Diretor antes do Diretor Central");
+    if (regularEvals.length < 2) throw new Error("Aguardando avaliação dos 2 Diretores antes do Diretor Central");
     if (centralEvals.length > 0) throw new Error("O Diretor Central já avaliou este elogio");
   } else {
+    if (regularEvals.length >= 2) throw new Error("Este elogio já possui as 2 avaliações de Diretor necessárias");
     if (centralEvals.length > 0) throw new Error("O Diretor Central já finalizou a avaliação deste elogio");
   }
 

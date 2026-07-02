@@ -34,7 +34,7 @@ export function calculateFinalMedal(evaluations: DirectorEvaluationInput[]): Fin
   const others = evaluations.filter((e) => !e.isCentralDirector);
 
   if (!central) throw new Error("Avaliação do Diretor Central não encontrada");
-  if (others.length < 1) throw new Error("É necessária avaliação de pelo menos 1 Diretor");
+  if (others.length < 1) throw new Error("É necessária avaliação de pelo menos 2 Diretores");
 
   const centralVal = MEDAL_VALUES[central.medal];
   const avgDirectors = others.reduce((sum, e) => sum + MEDAL_VALUES[e.medal], 0) / others.length;

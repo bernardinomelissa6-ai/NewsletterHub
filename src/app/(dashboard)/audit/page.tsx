@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = { title: "Auditoria" };
 
 export default async function AuditPage() {
-  await requireRole("ADMIN");
+  await requireRole("ADMIN", "DIRETOR_CENTRAL");
 
   const result = await getAuditLogs({ page: 1, limit: 30 });
 

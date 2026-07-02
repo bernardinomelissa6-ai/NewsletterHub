@@ -6,7 +6,7 @@ import { evaluateComplimentSchema } from "@/lib/validations/compliment.schema";
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  if (!["DIRECTOR", "ADMIN"].includes(session.user.role)) {
+  if (!["DIRECTOR", "DIRETOR_CENTRAL", "ADMIN"].includes(session.user.role)) {
     return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
   }
 

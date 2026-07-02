@@ -44,7 +44,7 @@ const COMPLIMENT_SELECT = `
   ),
   evaluations:compliment_evaluations(
     id, director_id, medal, justification, comment,
-    director:users!director_id(id, name, is_central_director)
+    director:users!director_id(id, name, role)
   )
 `;
 
@@ -219,6 +219,29 @@ export async function returnCompliment(
   notifyComplimentReturned({ id, insured: previous.insured, collaboratorId: previous.collaborator_id, observation: input.observation }).catch(console.error);
 }
 
+const CENTRAL_ROLES = ["DIRETOR_CENTRAL", "ADMIN"] as const;
+const isCentral = (role: string) => (CENTRAL_ROLES as readonly string[]).includes(role);
+
+export async function getPendingEvaluationsForCentralDirector(centralDirectorId: string) {
+  const { data } = await supabaseAdmin
+    .from("compliments")
+    .select(`
+      id, insured, received_at, branch, reason, status, quarter, year, created_at, attachment_url, collaborator_id,
+      evaluations:compliment_evaluations(director_id, medal, justification, director:users!director_id(id, name, role)),
+      collaborator:users!collaborator_id(id, name, area:areas(name)),
+      approvals:compliment_approvals(action, observation, manager:users!manager_id(name))
+    `)
+    .eq("status", "PENDENTE_AVALIACAO")
+    .order("created_at");
+
+  return (data ?? []).filter((c: any) => {
+    const evals = c.evaluations ?? [];
+    const regularCount = evals.filter((e: any) => e.director?.role === "DIRECTOR").length;
+    const alreadyCentral = evals.some((e: any) => isCentral(e.director?.role ?? ""));
+    return regularCount >= 2 && !alreadyCentral;
+  });
+}
+
 export async function evaluateCompliment(
   id: string,
   directorId: string,
@@ -230,13 +253,24 @@ export async function evaluateCompliment(
   const { data: previous } = await supabaseAdmin.from("compliments").select("status, insured, collaborator_id").eq("id", id).single();
   if (!previous || previous.status !== "PENDENTE_AVALIACAO") throw new Error("Elogio não está pendente de avaliação");
 
-  const { data: existingEval } = await supabaseAdmin
+  const { data: existingEvals } = await supabaseAdmin
     .from("compliment_evaluations")
-    .select("id")
-    .eq("compliment_id", id)
-    .eq("director_id", directorId)
-    .maybeSingle();
-  if (existingEval) throw new Error("Você já avaliou este elogio");
+    .select("director_id, director:users!director_id(role)")
+    .eq("compliment_id", id);
+
+  const evals = existingEvals ?? [];
+  const regularEvals = evals.filter((e: any) => !isCentral(e.director?.role ?? ""));
+  const centralEvals = evals.filter((e: any) => isCentral(e.director?.role ?? ""));
+  const myEval = evals.find((e: any) => e.director_id === directorId);
+
+  if (myEval) throw new Error("Você já avaliou este elogio");
+
+  if (isCentral(directorRole)) {
+    if (regularEvals.length < 2) throw new Error("Aguardando avaliação dos 2 Diretores antes do Diretor Central");
+    if (centralEvals.length > 0) throw new Error("O Diretor Central já avaliou este elogio");
+  } else {
+    if (regularEvals.length >= 2) throw new Error("Este elogio já possui as 2 avaliações de Diretor necessárias");
+  }
 
   await supabaseAdmin.from("compliment_evaluations").insert({
     id: randomUUID(),
@@ -248,27 +282,12 @@ export async function evaluateCompliment(
     updated_at: new Date().toISOString(),
   });
 
-  const { data: allEvals } = await supabaseAdmin
-    .from("compliment_evaluations")
-    .select("medal, director_id")
-    .eq("compliment_id", id);
-
-  const directorIds = (allEvals ?? []).map((e: any) => e.director_id);
-  const { data: directorsData } = directorIds.length > 0
-    ? await supabaseAdmin.from("users").select("id, is_central_director").in("id", directorIds)
-    : { data: [] };
-
-  const directorMap = new Map((directorsData ?? []).map((d: any) => [d.id, d]));
-  const evaluations = (allEvals ?? []).map((e: any) => ({
-    medal: e.medal as MedalType,
-    isCentralDirector: directorMap.get(e.director_id)?.is_central_director ?? false,
-  }));
-
-  const centralEval = evaluations.find((e) => e.isCentralDirector);
-  const regularEvals = evaluations.filter((e) => !e.isCentralDirector);
-
-  if (centralEval && regularEvals.length >= 2) {
-    const { score, finalMedal } = calculateFinalMedal(evaluations);
+  if (isCentral(directorRole)) {
+    const allEvals = [
+      ...regularEvals.map((e: any) => ({ medal: e.medal as MedalType, isCentralDirector: false })),
+      { medal: input.medal as MedalType, isCentralDirector: true },
+    ];
+    const { score, finalMedal } = calculateFinalMedal(allEvals);
 
     await supabaseAdmin.from("compliments").update({
       status: "AVALIADO",
@@ -278,10 +297,9 @@ export async function evaluateCompliment(
     }).eq("id", id);
 
     await createAuditLog({ userId: directorId, userName: directorName, userRole: directorRole, action: "EVALUATE", entityType: "Compliment", entityId: id, previousValue: { status: previous.status }, newValue: { status: "AVALIADO", final_medal: finalMedal, evaluation_score: score }, ipAddress });
-
     notifyComplimentEvaluated({ id, insured: previous.insured, collaboratorId: previous.collaborator_id, medal: finalMedal, justification: input.justification }).catch(console.error);
   } else {
-    await createAuditLog({ userId: directorId, userName: directorName, userRole: directorRole, action: "EVALUATE", entityType: "Compliment", entityId: id, previousValue: { status: previous.status }, newValue: { medal: input.medal, evaluationsCount: evaluations.length }, ipAddress });
+    await createAuditLog({ userId: directorId, userName: directorName, userRole: directorRole, action: "EVALUATE", entityType: "Compliment", entityId: id, previousValue: { status: previous.status }, newValue: { medal: input.medal, regularEvaluationsCount: regularEvals.length + 1 }, ipAddress });
   }
 }
 
@@ -304,26 +322,22 @@ export async function reevaluateCompliment(
   await supabaseAdmin.from("compliment_evaluations").update({ medal: input.medal, updated_at: new Date().toISOString() }).eq("id", evaluation.id);
   await supabaseAdmin.from("compliment_reevaluations").insert({ id: randomUUID(), compliment_id: id, director_id: directorId, previous_medal: evaluation.medal, new_medal: input.medal, reason: input.reason });
 
-  // Recalculate final medal with updated evaluation
-  const { data: allEvals } = await supabaseAdmin.from("compliment_evaluations").select("medal, director_id").eq("compliment_id", id);
-  const directorIds = (allEvals ?? []).map((e: any) => e.director_id);
-  const { data: directorsData } = directorIds.length > 0
-    ? await supabaseAdmin.from("users").select("id, is_central_director").in("id", directorIds)
-    : { data: [] };
+  const { data: allEvals } = await supabaseAdmin
+    .from("compliment_evaluations")
+    .select("medal, director_id, director:users!director_id(role)")
+    .eq("compliment_id", id);
 
-  const dirMap = new Map((directorsData ?? []).map((d: any) => [d.id, d]));
-  const evaluations = (allEvals ?? []).map((e: any) => ({
+  const evalList = (allEvals ?? []).map((e: any) => ({
     medal: e.medal as MedalType,
-    isCentralDirector: dirMap.get(e.director_id)?.is_central_director ?? false,
+    isCentralDirector: isCentral(e.director?.role ?? ""),
   }));
 
-  const centralEval = evaluations.find((e) => e.isCentralDirector);
-  const regularEvals = evaluations.filter((e) => !e.isCentralDirector);
+  const centralEval = evalList.find((e) => e.isCentralDirector);
+  const regularEvals = evalList.filter((e) => !e.isCentralDirector);
 
   if (centralEval && regularEvals.length >= 2) {
-    const { score, finalMedal } = calculateFinalMedal(evaluations);
+    const { score, finalMedal } = calculateFinalMedal(evalList);
     await supabaseAdmin.from("compliments").update({ final_medal: finalMedal, evaluation_score: score, updated_at: new Date().toISOString() }).eq("id", id);
-
     const { data: compliment } = await supabaseAdmin.from("compliments").select("insured, collaborator_id").eq("id", id).single();
     await createAuditLog({ userId: directorId, userName: directorName, userRole: directorRole, action: "REEVALUATE", entityType: "Compliment", entityId: id, previousValue: { medal: evaluation.medal }, newValue: { medal: input.medal, final_medal: finalMedal, reason: input.reason }, ipAddress });
     if (compliment) {

@@ -30,9 +30,9 @@ async function getAdminPendingApprovals() {
 }
 
 export default async function PendingApprovalPage() {
-  const session = await requireRole("MANAGER", "ADMIN");
+  const session = await requireRole("MANAGER", "ADMIN", "DIRETOR_CENTRAL");
 
-  const compliments = session.user.role === "ADMIN"
+  const compliments = ["ADMIN", "DIRETOR_CENTRAL"].includes(session.user.role)
     ? await getAdminPendingApprovals()
     : await getPendingApprovals(session.user.id);
 

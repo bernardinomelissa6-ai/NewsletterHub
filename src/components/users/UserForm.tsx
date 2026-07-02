@@ -16,7 +16,7 @@ import { Loader2 } from "lucide-react";
 const userFormSchema = z.object({
   name: z.string().min(2, "Nome obrigatório").max(200),
   email: z.string().email("Email inválido"),
-  role: z.enum(["COLLABORATOR", "MANAGER", "DIRECTOR", "ADMIN"]),
+  role: z.enum(["COLLABORATOR", "MANAGER", "DIRECTOR", "DIRETOR_CENTRAL", "ADMIN"]),
   areaId: z.string().uuid("Área inválida").optional().or(z.literal("")),
   password: z.string().min(8, "Senha deve ter ao menos 8 caracteres").optional().or(z.literal("")),
 });
@@ -27,6 +27,7 @@ const ROLES = [
   { value: "COLLABORATOR", label: "Colaborador" },
   { value: "MANAGER", label: "Gestor" },
   { value: "DIRECTOR", label: "Diretor" },
+  { value: "DIRETOR_CENTRAL", label: "Diretor Central" },
   { value: "ADMIN", label: "Admin" },
 ];
 

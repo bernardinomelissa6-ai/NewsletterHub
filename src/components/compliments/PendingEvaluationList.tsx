@@ -19,7 +19,7 @@ interface Evaluation {
   director_id: string;
   medal: MedalType;
   justification: string;
-  director: { name: string; is_central_director?: boolean };
+  director: { name: string; role?: string };
 }
 
 interface Compliment {
@@ -140,7 +140,7 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
                         {evaluations.map((ev, i) => (
                           <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-muted border flex items-center gap-1">
                             <CheckCircle2 className="w-3 h-3 text-green-600" />
-                            {ev.director.is_central_director ? "Dir. Central" : ev.director.name}: {MEDAL_LABELS[ev.medal]}
+                            {ev.director.role === "DIRETOR_CENTRAL" ? "Dir. Central" : ev.director.name}: {MEDAL_LABELS[ev.medal]}
                           </span>
                         ))}
                       </div>
@@ -174,7 +174,7 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
                 <p className="text-muted-foreground mt-1">{selected.reason}</p>
                 {isCentralDirector && (
                   <p className="mt-2 text-xs text-purple-700 font-medium">
-                    Sua avaliação tem peso 50% (Diretor Central).
+                    Avaliação final — peso 50% (Diretor Central).
                   </p>
                 )}
               </div>

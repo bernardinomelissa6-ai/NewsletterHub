@@ -25,11 +25,11 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/compliments", label: "Elogios", icon: Star },
-  { href: "/compliments/pending-approval", label: "Aprovar Elogios", icon: ClipboardList, roles: ["MANAGER", "ADMIN"] },
-  { href: "/compliments/pending-evaluation", label: "Avaliar Elogios", icon: Shield, roles: ["DIRECTOR", "ADMIN"] },
+  { href: "/compliments/pending-approval", label: "Aprovar Elogios", icon: ClipboardList, roles: ["MANAGER", "ADMIN", "DIRETOR_CENTRAL"] },
+  { href: "/compliments/pending-evaluation", label: "Avaliar Elogios", icon: Shield, roles: ["DIRECTOR", "ADMIN", "DIRETOR_CENTRAL"] },
   { href: "/trainings", label: "Treinamentos", icon: BookOpen },
-  { href: "/rankings/collaborators", label: "Ranking Colaboradores", icon: Trophy, roles: ["MANAGER", "DIRECTOR", "ADMIN"] },
-  { href: "/rankings/areas", label: "Ranking Áreas", icon: Building2, roles: ["DIRECTOR", "ADMIN"] },
+  { href: "/rankings/collaborators", label: "Ranking Colaboradores", icon: Trophy, roles: ["MANAGER", "DIRECTOR", "ADMIN", "DIRETOR_CENTRAL"] },
+  { href: "/rankings/areas", label: "Ranking Áreas", icon: Building2, roles: ["DIRECTOR", "ADMIN", "DIRETOR_CENTRAL"] },
   { href: "/rankings/teams", label: "Ranking da Equipe", icon: Users, roles: ["MANAGER"] },
   { href: "/notifications", label: "Notificações", icon: Bell },
   { href: "/settings/profile", label: "Configurações", icon: Settings },
@@ -42,6 +42,13 @@ const ADMIN_ITEMS: NavItem[] = [
   { href: "/audit", label: "Auditoria", icon: ClipboardList },
   { href: "/settings/deadlines", label: "Prazos", icon: Clock },
   { href: "/settings/branches", label: "Ramos", icon: Building2 },
+];
+
+const DIRETOR_CENTRAL_ITEMS: NavItem[] = [
+  { href: "/users", label: "Usuários", icon: Users },
+  { href: "/areas", label: "Áreas", icon: Building2 },
+  { href: "/reports", label: "Relatórios", icon: FileText },
+  { href: "/audit", label: "Auditoria", icon: ClipboardList },
 ];
 
 interface SidebarProps {
@@ -72,6 +79,7 @@ export function Sidebar({ userRole, unreadCount = 0 }: SidebarProps) {
   );
 
   const showAdmin = userRole === "ADMIN";
+  const showDiretorCentral = userRole === "DIRETOR_CENTRAL";
 
   return (
     <aside
@@ -133,7 +141,7 @@ export function Sidebar({ userRole, unreadCount = 0 }: SidebarProps) {
             );
           })}
 
-          {showAdmin && (
+          {(showAdmin || showDiretorCentral) && (
             <>
               {!collapsed && (
                 <div className="pt-4 pb-1">
@@ -143,7 +151,7 @@ export function Sidebar({ userRole, unreadCount = 0 }: SidebarProps) {
                 </div>
               )}
               {collapsed && <Separator className="my-2" />}
-              {ADMIN_ITEMS.map((item) => {
+              {(showAdmin ? ADMIN_ITEMS : DIRETOR_CENTRAL_ITEMS).map((item) => {
                 const active = isActive(item.href);
                 const Icon = item.icon;
                 return (

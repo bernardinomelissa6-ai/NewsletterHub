@@ -13,7 +13,7 @@ export default async function DashboardPage() {
   const { role, id } = session.user;
   const currentYear = new Date().getFullYear();
 
-  if (role === "ADMIN") {
+  if (role === "ADMIN" || role === "DIRETOR_CENTRAL") {
     const data = await getAdminDashboard();
     return <AdminDashboard data={data} />;
   }

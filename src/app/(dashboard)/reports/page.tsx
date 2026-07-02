@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = { title: "Relatórios" };
 
 export default async function ReportsPage() {
-  await requireRole("ADMIN", "DIRECTOR");
+  await requireRole("ADMIN", "DIRECTOR", "DIRETOR_CENTRAL");
 
   return (
     <div className="space-y-6">

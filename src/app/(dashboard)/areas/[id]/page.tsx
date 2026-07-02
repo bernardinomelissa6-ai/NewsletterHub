@@ -7,7 +7,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = { title: "Editar Área" };
 
 export default async function EditAreaPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireRole("ADMIN");
+  await requireRole("ADMIN", "DIRETOR_CENTRAL");
   const { id } = await params;
 
   const { data: area } = await supabaseAdmin.from("areas").select("*").eq("id", id).single();

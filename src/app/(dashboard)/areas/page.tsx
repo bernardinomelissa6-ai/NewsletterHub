@@ -9,7 +9,8 @@ import type { Metadata } from "next";
 export const metadata: Metadata = { title: "Áreas" };
 
 export default async function AreasPage() {
-  await requireRole("ADMIN");
+  const session = await requireRole("ADMIN", "DIRETOR_CENTRAL");
+  const isAdmin = session.user.role === "ADMIN";
 
   const { data: areasRaw } = await supabaseAdmin
     .from("areas")
@@ -36,9 +37,11 @@ export default async function AreasPage() {
           <h1 className="text-2xl font-bold">Áreas</h1>
           <p className="text-muted-foreground text-sm mt-1">{areas.length} área{areas.length !== 1 ? "s" : ""} cadastrada{areas.length !== 1 ? "s" : ""}</p>
         </div>
-        <Button asChild>
-          <Link href="/areas/new"><Plus className="w-4 h-4" /> Nova Área</Link>
-        </Button>
+        {isAdmin && (
+          <Button asChild>
+            <Link href="/areas/new"><Plus className="w-4 h-4" /> Nova Área</Link>
+          </Button>
+        )}
       </div>
       <AreaTable areas={areas as any} managers={managers ?? []} />
     </div>

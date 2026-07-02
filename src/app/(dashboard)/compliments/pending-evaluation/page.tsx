@@ -31,7 +31,7 @@ async function getAdminPendingEvaluations() {
 
   const [{ data: managersData }, { data: directorsData }] = await Promise.all([
     managerIds.length > 0 ? supabaseAdmin.from("users").select("id, name").in("id", managerIds) : Promise.resolve({ data: [] }),
-    directorIds.length > 0 ? supabaseAdmin.from("users").select("id, name").in("id", directorIds) : Promise.resolve({ data: [] }),
+    directorIds.length > 0 ? supabaseAdmin.from("users").select("id, name, is_central_director").in("id", directorIds) : Promise.resolve({ data: [] }),
   ]);
 
   const managerMap = new Map((managersData ?? []).map((u: any) => [u.id, u]));
@@ -45,16 +45,24 @@ async function getAdminPendingEvaluations() {
       .map((a: any) => ({ ...a, manager: managerMap.get(a.manager_id) ?? { name: "Desconhecido" } })),
     evaluations: (evaluationsData ?? [])
       .filter((e: any) => e.compliment_id === c.id)
-      .map((e: any) => ({ ...e, director: directorMap.get(e.director_id) ?? { name: "Desconhecido" } })),
+      .map((e: any) => ({
+        ...e,
+        director: directorMap.get(e.director_id) ?? { name: "Desconhecido", is_central_director: false },
+      })),
   }));
 }
 
 export default async function PendingEvaluationPage() {
   const session = await requireRole("DIRECTOR", "ADMIN");
 
-  const compliments = session.user.role === "ADMIN"
-    ? await getAdminPendingEvaluations()
-    : await getPendingEvaluations(session.user.id);
+  const [compliments, currentUserData] = await Promise.all([
+    session.user.role === "ADMIN"
+      ? getAdminPendingEvaluations()
+      : getPendingEvaluations(session.user.id),
+    supabaseAdmin.from("users").select("is_central_director").eq("id", session.user.id).maybeSingle(),
+  ]);
+
+  const isCentralDirector = (currentUserData.data as any)?.is_central_director ?? false;
 
   return (
     <div className="space-y-6">
@@ -64,7 +72,11 @@ export default async function PendingEvaluationPage() {
           {compliments.length} elogio{compliments.length !== 1 ? "s" : ""} aguardando avaliação e classificação de medalha
         </p>
       </div>
-      <PendingEvaluationList compliments={compliments as any} />
+      <PendingEvaluationList
+        compliments={compliments as any}
+        currentUserId={session.user.id}
+        isCentralDirector={isCentralDirector}
+      />
     </div>
   );
 }

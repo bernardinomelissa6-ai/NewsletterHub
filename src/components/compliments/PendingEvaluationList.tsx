@@ -11,9 +11,16 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Shield, User, Calendar, Loader2 } from "lucide-react";
+import { Shield, User, Calendar, Loader2, CheckCircle2 } from "lucide-react";
 import { MEDAL_LABELS, MEDAL_POINTS } from "@/lib/utils/ranking";
 import type { MedalType } from "@/lib/supabase/types";
+
+interface Evaluation {
+  director_id: string;
+  medal: MedalType;
+  justification: string;
+  director: { name: string; is_central_director?: boolean };
+}
 
 interface Compliment {
   id: string;
@@ -25,6 +32,7 @@ interface Compliment {
   year: number;
   collaborator: { id: string; name: string; area?: { name: string } | null };
   approvals: Array<{ action: string; observation: string | null; manager: { name: string } }>;
+  evaluations?: Evaluation[];
 }
 
 const MEDALS: MedalType[] = ["BRONZE", "SILVER", "GOLD", "SPECIAL"];
@@ -36,7 +44,13 @@ const MEDAL_SCORE_COLORS: Record<MedalType, string> = {
   BRONZE: "text-orange-700 bg-orange-100 border-orange-300",
 };
 
-export function PendingEvaluationList({ compliments }: { compliments: Compliment[] }) {
+interface Props {
+  compliments: Compliment[];
+  currentUserId: string;
+  isCentralDirector: boolean;
+}
+
+export function PendingEvaluationList({ compliments, currentUserId, isCentralDirector }: Props) {
   const router = useRouter();
   const [selected, setSelected] = useState<Compliment | null>(null);
   const [medal, setMedal] = useState<MedalType | "">("");
@@ -68,7 +82,7 @@ export function PendingEvaluationList({ compliments }: { compliments: Compliment
       });
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? "Erro ao avaliar"); return; }
-      toast.success("Elogio avaliado com sucesso!");
+      toast.success("Avaliação registrada com sucesso!");
       closeDialog();
       router.refresh();
     } finally {
@@ -93,6 +107,10 @@ export function PendingEvaluationList({ compliments }: { compliments: Compliment
       <div className="space-y-4">
         {compliments.map((c) => {
           const approval = c.approvals.find((a) => a.action === "APPROVED");
+          const evaluations = c.evaluations ?? [];
+          const alreadyEvaluated = evaluations.some((e) => e.director_id === currentUserId);
+          const evalCount = evaluations.length;
+
           return (
             <Card key={c.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-5">
@@ -101,6 +119,12 @@ export function PendingEvaluationList({ compliments }: { compliments: Compliment
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <Badge className="bg-purple-100 text-purple-800 border-purple-200">{c.branch}</Badge>
                       <span className="text-xs text-muted-foreground">T{c.quarter}/{c.year}</span>
+                      <Badge
+                        variant="outline"
+                        className={evalCount >= 3 ? "text-green-700 border-green-300 bg-green-50" : "text-orange-700 border-orange-300 bg-orange-50"}
+                      >
+                        {evalCount}/3 avaliações
+                      </Badge>
                     </div>
                     <h3 className="font-semibold text-base">{c.insured}</h3>
                     <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{c.reason}</p>
@@ -111,10 +135,26 @@ export function PendingEvaluationList({ compliments }: { compliments: Compliment
                         <span className="text-green-700">✓ {approval.manager.name}: "{approval.observation}"</span>
                       )}
                     </div>
+                    {evaluations.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {evaluations.map((ev, i) => (
+                          <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-muted border flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3 text-green-600" />
+                            {ev.director.is_central_director ? "Dir. Central" : ev.director.name}: {MEDAL_LABELS[ev.medal]}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <Button size="sm" onClick={() => openDialog(c)} className="shrink-0 gap-1">
-                    <Shield className="w-3.5 h-3.5" /> Avaliar
-                  </Button>
+                  {alreadyEvaluated ? (
+                    <span className="shrink-0 flex items-center gap-1 text-xs text-green-700 font-medium">
+                      <CheckCircle2 className="w-4 h-4" /> Avaliado
+                    </span>
+                  ) : (
+                    <Button size="sm" onClick={() => openDialog(c)} className="shrink-0 gap-1">
+                      <Shield className="w-3.5 h-3.5" /> Avaliar
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -132,9 +172,13 @@ export function PendingEvaluationList({ compliments }: { compliments: Compliment
               <div className="bg-muted rounded-lg p-3 text-sm">
                 <p className="font-medium">{selected.insured} → {selected.collaborator.name}</p>
                 <p className="text-muted-foreground mt-1">{selected.reason}</p>
+                {isCentralDirector && (
+                  <p className="mt-2 text-xs text-purple-700 font-medium">
+                    Sua avaliação tem peso 50% (Diretor Central).
+                  </p>
+                )}
               </div>
 
-              {/* Medal selection */}
               <div className="space-y-3">
                 <Label>Classificação / Medalha *</Label>
                 <div className="grid grid-cols-2 gap-2">

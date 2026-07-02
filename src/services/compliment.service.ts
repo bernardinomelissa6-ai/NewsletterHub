@@ -9,7 +9,9 @@ import {
   notifyDirectorNewPending,
 } from "./notification.service";
 import { getQuarter } from "@/lib/utils/quarters";
+import { calculateFinalMedal } from "@/lib/utils/medal-calculation";
 import { randomUUID } from "crypto";
+import type { MedalType } from "@/lib/supabase/types";
 import type {
   CreateComplimentInput,
   ApproveComplimentInput,
@@ -41,8 +43,8 @@ const COMPLIMENT_SELECT = `
     manager:users!manager_id(id, name)
   ),
   evaluations:compliment_evaluations(
-    id, medal, justification, comment,
-    director:users!director_id(id, name)
+    id, director_id, medal, justification, comment,
+    director:users!director_id(id, name, is_central_director)
   )
 `;
 
@@ -228,12 +230,59 @@ export async function evaluateCompliment(
   const { data: previous } = await supabaseAdmin.from("compliments").select("status, insured, collaborator_id").eq("id", id).single();
   if (!previous || previous.status !== "PENDENTE_AVALIACAO") throw new Error("Elogio não está pendente de avaliação");
 
-  await supabaseAdmin.from("compliments").update({ status: "AVALIADO", updated_at: new Date().toISOString() }).eq("id", id);
-  await supabaseAdmin.from("compliment_evaluations").insert({ id: randomUUID(), compliment_id: id, director_id: directorId, medal: input.medal, justification: input.justification, comment: input.comment ?? null, updated_at: new Date().toISOString() });
+  const { data: existingEval } = await supabaseAdmin
+    .from("compliment_evaluations")
+    .select("id")
+    .eq("compliment_id", id)
+    .eq("director_id", directorId)
+    .maybeSingle();
+  if (existingEval) throw new Error("Você já avaliou este elogio");
 
-  await createAuditLog({ userId: directorId, userName: directorName, userRole: directorRole, action: "EVALUATE", entityType: "Compliment", entityId: id, previousValue: { status: previous.status }, newValue: { status: "AVALIADO", medal: input.medal }, ipAddress });
+  await supabaseAdmin.from("compliment_evaluations").insert({
+    id: randomUUID(),
+    compliment_id: id,
+    director_id: directorId,
+    medal: input.medal,
+    justification: input.justification,
+    comment: input.comment ?? null,
+    updated_at: new Date().toISOString(),
+  });
 
-  notifyComplimentEvaluated({ id, insured: previous.insured, collaboratorId: previous.collaborator_id, medal: input.medal, justification: input.justification }).catch(console.error);
+  const { data: allEvals } = await supabaseAdmin
+    .from("compliment_evaluations")
+    .select("medal, director_id")
+    .eq("compliment_id", id);
+
+  const directorIds = (allEvals ?? []).map((e: any) => e.director_id);
+  const { data: directorsData } = directorIds.length > 0
+    ? await supabaseAdmin.from("users").select("id, is_central_director").in("id", directorIds)
+    : { data: [] };
+
+  const directorMap = new Map((directorsData ?? []).map((d: any) => [d.id, d]));
+  const evaluations = (allEvals ?? []).map((e: any) => ({
+    medal: e.medal as MedalType,
+    isCentralDirector: directorMap.get(e.director_id)?.is_central_director ?? false,
+  }));
+
+  const centralEval = evaluations.find((e) => e.isCentralDirector);
+  const regularEvals = evaluations.filter((e) => !e.isCentralDirector);
+
+  if (centralEval && regularEvals.length >= 2) {
+    const { score, finalMedal } = calculateFinalMedal(evaluations);
+
+    await supabaseAdmin.from("compliments").update({
+      status: "AVALIADO",
+      final_medal: finalMedal,
+      evaluation_score: score,
+      updated_at: new Date().toISOString(),
+    }).eq("id", id);
+
+    await createAuditLog({ userId: directorId, userName: directorName, userRole: directorRole, action: "EVALUATE", entityType: "Compliment", entityId: id, previousValue: { status: previous.status }, newValue: { status: "AVALIADO", final_medal: finalMedal, evaluation_score: score }, ipAddress });
+
+    notifyComplimentEvaluated({ id, insured: previous.insured, collaboratorId: previous.collaborator_id, medal: finalMedal, justification: input.justification }).catch(console.error);
+  } else {
+    await createAuditLog({ userId: directorId, userName: directorName, userRole: directorRole, action: "EVALUATE", entityType: "Compliment", entityId: id, previousValue: { status: previous.status }, newValue: { medal: input.medal, evaluationsCount: evaluations.length }, ipAddress });
+  }
 }
 
 export async function reevaluateCompliment(
@@ -244,18 +293,44 @@ export async function reevaluateCompliment(
   input: ReevaluateComplimentInput,
   ipAddress?: string
 ) {
-  const { data: evaluation } = await supabaseAdmin.from("compliment_evaluations").select("id, medal").eq("compliment_id", id).single();
-  if (!evaluation) throw new Error("Elogio não foi avaliado ainda");
+  const { data: evaluation } = await supabaseAdmin
+    .from("compliment_evaluations")
+    .select("id, medal")
+    .eq("compliment_id", id)
+    .eq("director_id", directorId)
+    .maybeSingle();
+  if (!evaluation) throw new Error("Você não avaliou este elogio ainda");
 
-  await supabaseAdmin.from("compliment_evaluations").update({ medal: input.medal, updated_at: new Date().toISOString() }).eq("compliment_id", id);
+  await supabaseAdmin.from("compliment_evaluations").update({ medal: input.medal, updated_at: new Date().toISOString() }).eq("id", evaluation.id);
   await supabaseAdmin.from("compliment_reevaluations").insert({ id: randomUUID(), compliment_id: id, director_id: directorId, previous_medal: evaluation.medal, new_medal: input.medal, reason: input.reason });
 
-  const { data: compliment } = await supabaseAdmin.from("compliments").select("insured, collaborator_id").eq("id", id).single();
+  // Recalculate final medal with updated evaluation
+  const { data: allEvals } = await supabaseAdmin.from("compliment_evaluations").select("medal, director_id").eq("compliment_id", id);
+  const directorIds = (allEvals ?? []).map((e: any) => e.director_id);
+  const { data: directorsData } = directorIds.length > 0
+    ? await supabaseAdmin.from("users").select("id, is_central_director").in("id", directorIds)
+    : { data: [] };
 
-  await createAuditLog({ userId: directorId, userName: directorName, userRole: directorRole, action: "REEVALUATE", entityType: "Compliment", entityId: id, previousValue: { medal: evaluation.medal }, newValue: { medal: input.medal, reason: input.reason }, ipAddress });
+  const dirMap = new Map((directorsData ?? []).map((d: any) => [d.id, d]));
+  const evaluations = (allEvals ?? []).map((e: any) => ({
+    medal: e.medal as MedalType,
+    isCentralDirector: dirMap.get(e.director_id)?.is_central_director ?? false,
+  }));
 
-  if (compliment) {
-    notifyComplimentEvaluated({ id, insured: compliment.insured, collaboratorId: compliment.collaborator_id, medal: input.medal, justification: input.reason }).catch(console.error);
+  const centralEval = evaluations.find((e) => e.isCentralDirector);
+  const regularEvals = evaluations.filter((e) => !e.isCentralDirector);
+
+  if (centralEval && regularEvals.length >= 2) {
+    const { score, finalMedal } = calculateFinalMedal(evaluations);
+    await supabaseAdmin.from("compliments").update({ final_medal: finalMedal, evaluation_score: score, updated_at: new Date().toISOString() }).eq("id", id);
+
+    const { data: compliment } = await supabaseAdmin.from("compliments").select("insured, collaborator_id").eq("id", id).single();
+    await createAuditLog({ userId: directorId, userName: directorName, userRole: directorRole, action: "REEVALUATE", entityType: "Compliment", entityId: id, previousValue: { medal: evaluation.medal }, newValue: { medal: input.medal, final_medal: finalMedal, reason: input.reason }, ipAddress });
+    if (compliment) {
+      notifyComplimentEvaluated({ id, insured: compliment.insured, collaboratorId: compliment.collaborator_id, medal: finalMedal, justification: input.reason }).catch(console.error);
+    }
+  } else {
+    await createAuditLog({ userId: directorId, userName: directorName, userRole: directorRole, action: "REEVALUATE", entityType: "Compliment", entityId: id, previousValue: { medal: evaluation.medal }, newValue: { medal: input.medal, reason: input.reason }, ipAddress });
   }
 }
 

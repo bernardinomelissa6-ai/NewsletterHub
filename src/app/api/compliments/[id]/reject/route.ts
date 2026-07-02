@@ -18,11 +18,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (!parsed.success) return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
 
     const ipAddress = req.headers.get("x-forwarded-for") ?? undefined;
-    const result = await rejectCompliment(
+    await rejectCompliment(
       id, session.user.id, session.user.name ?? "Desconhecido",
       session.user.role, parsed.data, ipAddress
     );
-    return NextResponse.json(result);
+    return NextResponse.json({ success: true });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 400 });
   }

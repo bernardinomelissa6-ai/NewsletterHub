@@ -1,5 +1,15 @@
 export function getQuarter(date: Date): number {
-  return Math.ceil((date.getMonth() + 1) / 3);
+  return Math.ceil((date.getUTCMonth() + 1) / 3);
+}
+
+// Parses YYYY-MM-DD string directly (no timezone conversion)
+export function getQuarterFromDateString(dateStr: string): number {
+  const month = parseInt(dateStr.substring(5, 7), 10);
+  return Math.ceil(month / 3);
+}
+
+export function getYearFromDateString(dateStr: string): number {
+  return parseInt(dateStr.substring(0, 4), 10);
 }
 
 export function getQuarterRange(year: number, quarter: number): { start: Date; end: Date } {

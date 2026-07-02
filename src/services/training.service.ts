@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createAuditLog } from "./audit.service";
-import { getQuarter } from "@/lib/utils/quarters";
+import { getQuarterFromDateString, getYearFromDateString } from "@/lib/utils/quarters";
 import { randomUUID } from "crypto";
 import type { CreateTrainingInput, TrainingFilterInput } from "@/lib/validations/training.schema";
 
@@ -14,9 +14,10 @@ export async function createTraining(
   attachmentType?: string,
   ipAddress?: string
 ) {
-  const date = new Date(input.date);
-  const year = date.getFullYear();
-  const quarter = getQuarter(date);
+  const dateStr = input.date.substring(0, 10);
+  const year = getYearFromDateString(dateStr);
+  const quarter = getQuarterFromDateString(dateStr);
+  const date = new Date(dateStr + "T12:00:00.000Z");
 
   const { data: training, error } = await supabaseAdmin.from("trainings").insert({
     id: randomUUID(),

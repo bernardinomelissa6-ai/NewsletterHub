@@ -156,7 +156,7 @@ export function ComplimentList({ initialData, userRole, userId }: Props) {
                       <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                         <span>{c.collaborator?.name ?? "—"}</span>
                         <span>•</span>
-                        <span>{format(new Date(c.received_at), "dd/MM/yyyy", { locale: ptBR })}</span>
+                        <span>{format(new Date(c.received_at.substring(0, 10) + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}</span>
                         {c.attachment_url && (
                           <>
                             <span>•</span>

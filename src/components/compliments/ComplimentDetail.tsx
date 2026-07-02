@@ -82,7 +82,7 @@ export function ComplimentDetail({ compliment: c, userRole, userId }: Props) {
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Calendar className="w-4 h-4" />
-              <span>{format(new Date(c.receivedAt), "dd/MM/yyyy", { locale: ptBR })}</span>
+              <span>{format(new Date(String(c.receivedAt).substring(0, 10) + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}</span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Tag className="w-4 h-4" />

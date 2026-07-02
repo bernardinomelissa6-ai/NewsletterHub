@@ -91,7 +91,7 @@ export function MyComplimentsList({ compliments }: { compliments: Compliment[] }
                     <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{c.reason}</p>
                     <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
                       <Calendar className="w-3 h-3" />
-                      {format(new Date(c.received_at), "dd/MM/yyyy", { locale: ptBR })}
+                      {format(new Date(c.received_at.substring(0, 10) + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}
                     </div>
                   </div>
                 </div>
@@ -129,7 +129,7 @@ export function MyComplimentsList({ compliments }: { compliments: Compliment[] }
                       <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{c.reason}</p>
                       <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
                         <Calendar className="w-3 h-3" />
-                        {format(new Date(c.received_at), "dd/MM/yyyy", { locale: ptBR })}
+                        {format(new Date(c.received_at.substring(0, 10) + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}
                       </div>
                     </div>
                   </div>
@@ -175,7 +175,7 @@ export function MyComplimentsList({ compliments }: { compliments: Compliment[] }
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Data</p>
-                  <p>{format(new Date(selected.received_at), "dd/MM/yyyy", { locale: ptBR })}</p>
+                  <p>{format(new Date(selected.received_at.substring(0, 10) + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Trimestre / Ano</p>

@@ -8,7 +8,7 @@ import {
   notifyManagerNewPending,
   notifyDirectorNewPending,
 } from "./notification.service";
-import { getQuarter } from "@/lib/utils/quarters";
+import { getQuarterFromDateString, getYearFromDateString } from "@/lib/utils/quarters";
 import { calculateFinalMedal } from "@/lib/utils/medal-calculation";
 import { randomUUID } from "crypto";
 import type { MedalType } from "@/lib/supabase/types";
@@ -59,9 +59,11 @@ export async function createCompliment(
   attachmentType?: string,
   ipAddress?: string
 ) {
-  const receivedAt = new Date(input.receivedAt);
-  const year = receivedAt.getFullYear();
-  const quarter = getQuarter(receivedAt);
+  const dateStr = input.receivedAt.substring(0, 10); // "YYYY-MM-DD"
+  const year = getYearFromDateString(dateStr);
+  const quarter = getQuarterFromDateString(dateStr);
+  // Store as noon UTC so any timezone displays the correct date
+  const receivedAt = new Date(dateStr + "T12:00:00.000Z");
 
   const { data: compliment, error } = await supabaseAdmin.from("compliments").insert({
     id: randomUUID(),
@@ -513,10 +515,10 @@ export async function updateCompliment(
   const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (data.insured) updateData.insured = data.insured;
   if (data.receivedAt) {
-    const d = new Date(data.receivedAt);
-    updateData.received_at = d.toISOString();
-    updateData.year = d.getFullYear();
-    updateData.quarter = getQuarter(d);
+    const dateStr = data.receivedAt.substring(0, 10);
+    updateData.received_at = new Date(dateStr + "T12:00:00.000Z").toISOString();
+    updateData.year = getYearFromDateString(dateStr);
+    updateData.quarter = getQuarterFromDateString(dateStr);
   }
   if (data.branch) updateData.branch = data.branch;
   if (data.reason) updateData.reason = data.reason;

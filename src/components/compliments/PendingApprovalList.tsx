@@ -121,7 +121,7 @@ export function PendingApprovalList({ compliments }: { compliments: Compliment[]
                   </span>
                 )}
                 <span className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3" /> {format(new Date(c.received_at), "dd/MM/yyyy", { locale: ptBR })}
+                  <Calendar className="w-3 h-3" /> {format(new Date(c.received_at.substring(0, 10) + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}
                 </span>
               </div>
             </CardContent>
@@ -169,7 +169,7 @@ export function PendingApprovalList({ compliments }: { compliments: Compliment[]
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Data de Recebimento</p>
-                  <p>{format(new Date(selected.received_at), "dd/MM/yyyy", { locale: ptBR })}</p>
+                  <p>{format(new Date(selected.received_at.substring(0, 10) + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Trimestre / Ano</p>

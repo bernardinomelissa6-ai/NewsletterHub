@@ -278,7 +278,7 @@ export async function evaluateCompliment(
     compliment_id: id,
     director_id: directorId,
     medal: input.medal,
-    justification: input.justification,
+    justification: input.justification ?? "",
     comment: input.comment ?? null,
     updated_at: new Date().toISOString(),
   });
@@ -298,7 +298,7 @@ export async function evaluateCompliment(
     }).eq("id", id);
 
     await createAuditLog({ userId: directorId, userName: directorName, userRole: directorRole, action: "EVALUATE", entityType: "Compliment", entityId: id, previousValue: { status: previous.status }, newValue: { status: "AVALIADO", final_medal: finalMedal, evaluation_score: score }, ipAddress });
-    notifyComplimentEvaluated({ id, insured: previous.insured, collaboratorId: previous.collaborator_id, medal: finalMedal, justification: input.justification }).catch(console.error);
+    notifyComplimentEvaluated({ id, insured: previous.insured, collaboratorId: previous.collaborator_id, medal: finalMedal, justification: input.justification ?? "" }).catch(console.error);
   } else {
     await createAuditLog({ userId: directorId, userName: directorName, userRole: directorRole, action: "EVALUATE", entityType: "Compliment", entityId: id, previousValue: { status: previous.status }, newValue: { medal: input.medal, regularEvaluationsCount: regularEvals.length + 1 }, ipAddress });
   }

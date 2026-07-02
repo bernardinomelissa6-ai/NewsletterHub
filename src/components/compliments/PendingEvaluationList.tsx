@@ -15,6 +15,7 @@ import { Shield, User, Calendar, Loader2, CheckCircle2 } from "lucide-react";
 import { MEDAL_LABELS } from "@/lib/utils/ranking";
 import { MedalIcon } from "@/components/ui/MedalIcon";
 import type { MedalType } from "@/lib/supabase/types";
+import Link from "next/link";
 
 interface Evaluation {
   director_id: string;
@@ -116,7 +117,7 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
             <Card key={c.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
+                  <Link href={`/compliments/${c.id}`} className="flex-1 min-w-0 block hover:opacity-80 transition-opacity">
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <Badge className="bg-purple-100 text-purple-800 border-purple-200">{c.branch}</Badge>
                       <span className="text-xs text-muted-foreground">T{c.quarter}/{c.year}</span>
@@ -146,7 +147,7 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
                         ))}
                       </div>
                     )}
-                  </div>
+                  </Link>
                   {alreadyEvaluated ? (
                     <span className="shrink-0 flex items-center gap-1 text-xs text-green-700 font-medium">
                       <CheckCircle2 className="w-4 h-4" /> Avaliado

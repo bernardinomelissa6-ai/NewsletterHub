@@ -40,7 +40,7 @@ interface Props {
     quarter: number;
     year: number;
     createdAt: Date | string;
-    collaborator: { id: string; name: string; area?: { name: string } | null };
+    collaborator: { id: string; name: string; area?: { name: string } | null } | null;
     approvals: Array<{ action: string; observation: string | null; createdAt: string; manager: { name: string } }>;
     evaluations: Array<{ medal: MedalType; justification: string; comment: string | null; createdAt: string; director: { name: string } }>;
   };
@@ -49,7 +49,7 @@ interface Props {
 }
 
 export function ComplimentDetail({ compliment: c, userRole, userId }: Props) {
-  const canEdit = c.status === "DEVOLVIDO_PARA_AJUSTE" && (c.collaborator.id === userId || userRole === "ADMIN");
+  const canEdit = c.status === "DEVOLVIDO_PARA_AJUSTE" && (c.collaborator?.id === userId || userRole === "ADMIN");
 
   return (
     <div className="space-y-5">
@@ -78,7 +78,7 @@ export function ComplimentDetail({ compliment: c, userRole, userId }: Props) {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div className="flex items-center gap-2 text-muted-foreground">
               <User className="w-4 h-4" />
-              <span>{c.collaborator.name} {c.collaborator.area ? `· ${c.collaborator.area.name}` : ""}</span>
+              <span>{c.collaborator?.name ?? "—"}{c.collaborator?.area ? ` · ${c.collaborator.area.name}` : ""}</span>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Calendar className="w-4 h-4" />

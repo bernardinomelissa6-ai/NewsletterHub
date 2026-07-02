@@ -13,9 +13,15 @@ export default async function ComplimentDetailPage({ params }: { params: Promise
   const compliment = await getComplimentById(id);
   if (!compliment) notFound();
 
+  const c = compliment as any;
+  const displayCompliment = {
+    ...c,
+    collaborator: c.collaborator ?? c.submitted_by ?? null,
+  };
+
   return (
     <div className="max-w-2xl">
-      <ComplimentDetail compliment={compliment as any} userRole={session.user.role} userId={session.user.id} />
+      <ComplimentDetail compliment={displayCompliment} userRole={session.user.role} userId={session.user.id} />
     </div>
   );
 }

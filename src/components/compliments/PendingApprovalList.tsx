@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Check, X, RotateCcw, User, Calendar, Tag, FileText, Loader2 } from "lucide-react";
+import Link from "next/link";
 
 interface Compliment {
   id: string;
@@ -93,7 +94,7 @@ export function PendingApprovalList({ compliments }: { compliments: Compliment[]
           <Card key={c.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">
             <CardContent className="p-5">
               <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
+                <Link href={`/compliments/${c.id}`} className="flex-1 min-w-0 block hover:opacity-80 transition-opacity">
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
                     <Badge variant="warning">{c.branch}</Badge>
                     <span className="text-xs text-muted-foreground">T{c.quarter}/{c.year}</span>
@@ -106,7 +107,7 @@ export function PendingApprovalList({ compliments }: { compliments: Compliment[]
                     <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {format(new Date(c.received_at), "dd/MM/yyyy", { locale: ptBR })}</span>
                     {c.attachment_url && <span className="flex items-center gap-1"><FileText className="w-3 h-3" /> Anexo disponível</span>}
                   </div>
-                </div>
+                </Link>
                 <div className="flex flex-col gap-2 shrink-0">
                   <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white gap-1" onClick={() => openDialog(c, "approve")}>
                     <Check className="w-3.5 h-3.5" /> Aprovar

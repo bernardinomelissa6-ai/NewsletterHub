@@ -10,7 +10,7 @@ export default async function PendingApprovalPage() {
   const session = await requireRole("MANAGER", "ADMIN");
 
   const compliments = session.user.role === "ADMIN"
-    ? ((await supabaseAdmin.from("compliments").select("id, insured, received_at, branch, reason, status, quarter, year, created_at, collaborator:users!compliments_collaborator_id_fkey(id, name, area:areas(name))").eq("status", "PENDENTE_APROVACAO").order("created_at")).data ?? [])
+    ? ((await supabaseAdmin.from("compliments").select("id, insured, received_at, branch, reason, status, quarter, year, created_at, attachment_url, collaborator:users!collaborator_id(id, name, area:areas(name))").eq("status", "PENDENTE_APROVACAO").order("created_at")).data ?? [])
     : await getPendingApprovals(session.user.id);
 
   return (

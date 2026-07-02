@@ -5,9 +5,9 @@ import { PendingEvaluationList } from "@/components/compliments/PendingEvaluatio
 import type { Metadata } from "next";
 
 const COMPLIMENT_SELECT = `id, insured, received_at, branch, reason, status, quarter, year, created_at, updated_at,
-  collaborator:users!compliments_collaborator_id_fkey(id, name, area:areas(name)),
-  approvals:compliment_approvals(id, action, observation, created_at, manager:users!compliment_approvals_manager_id_fkey(name)),
-  evaluations:compliment_evaluations(id, medal, justification, director:users!compliment_evaluations_director_id_fkey(name))`;
+  collaborator:users!collaborator_id(id, name, area:areas(name)),
+  approvals:compliment_approvals(id, action, observation, created_at, manager:users!manager_id(name)),
+  evaluations:compliment_evaluations(id, medal, justification, director:users!director_id(name))`;
 
 export const metadata: Metadata = { title: "Avaliação de Elogios" };
 

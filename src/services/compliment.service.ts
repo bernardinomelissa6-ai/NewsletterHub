@@ -23,7 +23,7 @@ import type {
 const COMPLIMENT_LIST_SELECT = `
   id, insured, received_at, branch, reason, status,
   attachment_url, quarter, year, created_at,
-  collaborator:users!compliments_collaborator_id_fkey(id, name),
+  collaborator:users!collaborator_id(id, name),
   evaluations:compliment_evaluations(medal)
 `;
 
@@ -31,18 +31,18 @@ const COMPLIMENT_SELECT = `
   id, insured, received_at, branch, reason, status,
   attachment_url, attachment_name, attachment_type,
   quarter, year, created_at, updated_at,
-  collaborator:users!compliments_collaborator_id_fkey(
+  collaborator:users!collaborator_id(
     id, name, email, area_id,
     area:areas(id, name)
   ),
-  submitted_by:users!compliments_submitted_by_id_fkey(id, name),
+  submitted_by:users!submitted_by_id(id, name),
   approvals:compliment_approvals(
     id, action, observation, created_at,
-    manager:users!compliment_approvals_manager_id_fkey(id, name)
+    manager:users!manager_id(id, name)
   ),
   evaluations:compliment_evaluations(
     id, medal, justification, comment,
-    director:users!compliment_evaluations_director_id_fkey(id, name)
+    director:users!director_id(id, name)
   )
 `;
 
@@ -92,7 +92,7 @@ export async function getComplimentById(id: string) {
   return data;
 }
 
-export async function getCompliments(filter: ComplimentFilterInput, userId: string, userRole: string, userAreaId: string | null) {
+export async function getCompliments(filter: ComplimentFilterInput, userId: string, userRole: string, _userAreaId: string | null) {
   const { page, limit, status, collaboratorId, areaId, branch, year, quarter, search } = filter;
   const from = (page - 1) * limit;
   const to = from + limit - 1;

@@ -333,7 +333,7 @@ export async function evaluateCompliment(
     if (centralEvals.length > 0) throw new Error("O Diretor Central já finalizou a avaliação deste elogio");
   }
 
-  await supabaseAdmin.from("compliment_evaluations").insert({
+  const { error: insertError } = await supabaseAdmin.from("compliment_evaluations").insert({
     id: randomUUID(),
     compliment_id: id,
     director_id: directorId,
@@ -342,6 +342,7 @@ export async function evaluateCompliment(
     comment: input.comment ?? null,
     updated_at: new Date().toISOString(),
   });
+  if (insertError) throw new Error(insertError.message);
 
   if (isCentral(directorRole)) {
     const allEvals = [

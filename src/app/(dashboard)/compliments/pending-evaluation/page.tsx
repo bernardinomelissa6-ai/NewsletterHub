@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth/session";
-import { getPendingEvaluations, getPendingEvaluationsForCentralDirector } from "@/services/compliment.service";
+import { getPendingEvaluationsForCentralDirector } from "@/services/compliment.service";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { PendingEvaluationList } from "@/components/compliments/PendingEvaluationList";
 import type { Metadata } from "next";
@@ -77,12 +77,11 @@ export default async function PendingEvaluationPage() {
   const { role, id: userId } = session.user;
 
   let compliments: any[];
-  if (role === "ADMIN") {
-    compliments = await getAdminPendingEvaluations();
-  } else if (role === "DIRETOR_CENTRAL") {
+  if (role === "DIRETOR_CENTRAL") {
     compliments = await getPendingEvaluationsForCentralDirector(userId);
   } else {
-    compliments = await getPendingEvaluations(userId);
+    // ADMIN e DIRECTOR usam a mesma query manual (sem FK joins que podem falhar)
+    compliments = await getAdminPendingEvaluations();
   }
 
   const isCentralDirector = role === "DIRETOR_CENTRAL";

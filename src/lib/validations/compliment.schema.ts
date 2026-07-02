@@ -25,7 +25,7 @@ export const returnComplimentSchema = z.object({
 
 export const evaluateComplimentSchema = z.object({
   medal: z.nativeEnum(MedalType, { errorMap: () => ({ message: "Medalha inválida" }) }),
-  justification: z.string().min(10, "Justificativa obrigatória (mínimo 10 caracteres)").max(2000),
+  justification: z.string().max(2000).optional().default(""),
   comment: z.string().max(1000).optional(),
 });
 

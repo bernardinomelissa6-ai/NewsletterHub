@@ -59,7 +59,6 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
   const [selected, setSelected] = useState<Compliment | null>(null);
   const [mode, setMode] = useState<Mode>("detail");
   const [medal, setMedal] = useState<MedalType | "">("");
-  const [justification, setJustification] = useState("");
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -78,20 +77,18 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
   function startEvaluation() {
     setMode("evaluate");
     setMedal("");
-    setJustification("");
     setComment("");
   }
 
   async function handleEvaluate() {
     if (!selected || !medal) { toast.error("Selecione uma medalha"); return; }
-    if (justification.trim().length < 10) { toast.error("Justificativa obrigatória (mínimo 10 caracteres)"); return; }
 
     setLoading(true);
     try {
       const res = await fetch(`/api/compliments/${selected.id}/evaluate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ medal, justification, comment: comment || undefined }),
+        body: JSON.stringify({ medal, justification: "", comment: comment || undefined }),
       });
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? "Erro ao avaliar"); return; }
@@ -306,19 +303,6 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
                       </button>
                     ))}
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Justificativa *</Label>
-                  <Textarea
-                    placeholder="Justifique a classificação atribuída..."
-                    value={justification}
-                    onChange={(e) => setJustification(e.target.value)}
-                    rows={3}
-                  />
-                  {justification.length > 0 && justification.length < 10 && (
-                    <p className="text-xs text-destructive">Mínimo 10 caracteres</p>
-                  )}
                 </div>
 
                 <div className="space-y-2">

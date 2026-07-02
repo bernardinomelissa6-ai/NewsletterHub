@@ -37,9 +37,9 @@ interface Notification {
   type: NotificationType;
   title: string;
   message: string;
-  isRead: boolean;
-  createdAt: string;
-  referenceId?: string | null;
+  is_read: boolean;
+  created_at: string;
+  reference_id?: string | null;
 }
 
 export function NotificationList({ notifications }: { notifications: Notification[] }) {
@@ -48,17 +48,18 @@ export function NotificationList({ notifications }: { notifications: Notificatio
 
   async function markRead(id: string) {
     await fetch(`/api/notifications/${id}/read`, { method: "PATCH" });
-    setItems((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n));
+    setItems((prev) => prev.map((n) => n.id === id ? { ...n, is_read: true } : n));
   }
 
   async function markAllRead() {
     await fetch("/api/notifications", { method: "PATCH" });
-    setItems((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    setItems((prev) => prev.map((n) => ({ ...n, is_read: true })));
     toast.success("Todas as notificações marcadas como lidas");
     router.refresh();
   }
 
-  const unreadCount = items.filter((n) => !n.isRead).length;
+  const unreadCount = items.filter((n) => !n.is_read).length;
+
 
   if (items.length === 0) {
     return (
@@ -87,8 +88,8 @@ export function NotificationList({ notifications }: { notifications: Notificatio
           return (
             <Card
               key={n.id}
-              className={`border-0 shadow-sm cursor-pointer transition-colors ${!n.isRead ? "ring-1 ring-primary/20 bg-primary/5" : ""}`}
-              onClick={() => !n.isRead && markRead(n.id)}
+              className={`border-0 shadow-sm cursor-pointer transition-colors ${!n.is_read ? "ring-1 ring-primary/20 bg-primary/5" : ""}`}
+              onClick={() => !n.is_read && markRead(n.id)}
             >
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
@@ -97,12 +98,12 @@ export function NotificationList({ notifications }: { notifications: Notificatio
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <p className={`font-medium text-sm ${!n.isRead ? "" : "text-muted-foreground"}`}>{n.title}</p>
-                      {!n.isRead && <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-1.5" />}
+                      <p className={`font-medium text-sm ${!n.is_read ? "" : "text-muted-foreground"}`}>{n.title}</p>
+                      {!n.is_read && <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-1.5" />}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">{n.message}</p>
                     <p className="text-xs text-muted-foreground mt-1.5">
-                      {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true, locale: ptBR })}
+                      {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: ptBR })}
                     </p>
                   </div>
                 </div>

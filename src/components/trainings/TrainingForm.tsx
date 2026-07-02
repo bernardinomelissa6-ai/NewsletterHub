@@ -103,9 +103,14 @@ export function TrainingForm({ collaborators, defaultCollaboratorId }: Props) {
             {errors.branch && <p className="text-xs text-destructive">{errors.branch.message}</p>}
           </div>
 
-          {collaborators.length > 1 && (
-            <div className="space-y-2">
-              <Label>Colaborador *</Label>
+          <div className="space-y-2">
+            <Label>Colaborador *</Label>
+            {collaborators.length <= 1 ? (
+              <Input
+                defaultValue={collaborators[0]?.name ?? ""}
+                placeholder="Nome do colaborador"
+              />
+            ) : (
               <Select onValueChange={(v) => setValue("collaboratorId", v)} defaultValue={defaultCollaboratorId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o colaborador" />
@@ -118,9 +123,9 @@ export function TrainingForm({ collaborators, defaultCollaboratorId }: Props) {
                   ))}
                 </SelectContent>
               </Select>
-              {errors.collaboratorId && <p className="text-xs text-destructive">{errors.collaboratorId.message}</p>}
-            </div>
-          )}
+            )}
+            {errors.collaboratorId && <p className="text-xs text-destructive">{errors.collaboratorId.message}</p>}
+          </div>
 
           <div className="space-y-2">
             <Label>Certificado / Arquivo (opcional)</Label>

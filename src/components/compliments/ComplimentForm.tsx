@@ -104,9 +104,14 @@ export function ComplimentForm({ collaborators, branches, defaultCollaboratorId,
             </div>
           </div>
 
-          {collaborators.length > 1 && (
-            <div className="space-y-2">
-              <Label>Colaborador *</Label>
+          <div className="space-y-2">
+            <Label>Colaborador *</Label>
+            {collaborators.length <= 1 ? (
+              <Input
+                defaultValue={collaborators[0]?.name ?? ""}
+                placeholder="Nome do colaborador"
+              />
+            ) : (
               <Select
                 onValueChange={(v) => setValue("collaboratorId", v)}
                 defaultValue={defaultCollaboratorId}
@@ -122,9 +127,9 @@ export function ComplimentForm({ collaborators, branches, defaultCollaboratorId,
                   ))}
                 </SelectContent>
               </Select>
-              {errors.collaboratorId && <p className="text-xs text-destructive">{errors.collaboratorId.message}</p>}
-            </div>
-          )}
+            )}
+            {errors.collaboratorId && <p className="text-xs text-destructive">{errors.collaboratorId.message}</p>}
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="reason">Elogio *</Label>

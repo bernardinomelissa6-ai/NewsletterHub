@@ -11,7 +11,7 @@ export default async function NewComplimentPage() {
   const { role, id: userId } = session.user;
 
   let collaborators: any[] = [];
-  if (role === "ADMIN") {
+  if (role === "ADMIN" || role === "DIRETOR_CENTRAL") {
     const { data } = await supabaseAdmin.from("users").select("id, name, area:areas(name)").eq("is_active", true).eq("role", "COLLABORATOR").order("name");
     collaborators = data ?? [];
   } else if (role === "MANAGER") {
@@ -25,6 +25,7 @@ export default async function NewComplimentPage() {
   }
 
   const branches = await getBranches(true);
+  const defaultCollaboratorId = collaborators.length === 1 ? collaborators[0]?.id : undefined;
 
   return (
     <div className="max-w-2xl">
@@ -34,7 +35,7 @@ export default async function NewComplimentPage() {
           Registre um elogio recebido de cliente, segurado, parceiro ou corretor
         </p>
       </div>
-      <ComplimentForm collaborators={collaborators} branches={branches} defaultCollaboratorId={role === "COLLABORATOR" ? userId : undefined} />
+      <ComplimentForm collaborators={collaborators} branches={branches} defaultCollaboratorId={defaultCollaboratorId} />
     </div>
   );
 }

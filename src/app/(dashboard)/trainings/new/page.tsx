@@ -10,7 +10,7 @@ export default async function NewTrainingPage() {
   const { role, id: userId } = session.user;
 
   let collaborators: any[] = [];
-  if (role === "ADMIN") {
+  if (role === "ADMIN" || role === "DIRETOR_CENTRAL") {
     const { data } = await supabaseAdmin.from("users").select("id, name, area:areas(name)").eq("is_active", true).eq("role", "COLLABORATOR").order("name");
     collaborators = data ?? [];
   } else if (role === "MANAGER") {
@@ -23,6 +23,8 @@ export default async function NewTrainingPage() {
     collaborators = data ?? [];
   }
 
+  const defaultCollaboratorId = collaborators.length === 1 ? collaborators[0]?.id : undefined;
+
   return (
     <div className="max-w-2xl">
       <div className="mb-6">
@@ -31,7 +33,7 @@ export default async function NewTrainingPage() {
           Registre um treinamento, curso ou consultoria realizada
         </p>
       </div>
-      <TrainingForm collaborators={collaborators} defaultCollaboratorId={role === "COLLABORATOR" ? userId : undefined} />
+      <TrainingForm collaborators={collaborators} defaultCollaboratorId={defaultCollaboratorId} />
     </div>
   );
 }

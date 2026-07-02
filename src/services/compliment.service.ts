@@ -91,8 +91,80 @@ export async function createCompliment(
 }
 
 export async function getComplimentById(id: string) {
-  const { data } = await supabaseAdmin.from("compliments").select(COMPLIMENT_SELECT).eq("id", id).single();
-  return data;
+  const { data: c } = await supabaseAdmin
+    .from("compliments")
+    .select("id, insured, received_at, branch, reason, status, attachment_url, attachment_name, attachment_type, quarter, year, created_at, updated_at, collaborator_id, submitted_by_id")
+    .eq("id", id)
+    .single();
+  if (!c) return null;
+
+  const userIdsToFetch = [...new Set([c.collaborator_id, c.submitted_by_id].filter(Boolean))];
+  const { data: users } = userIdsToFetch.length > 0
+    ? await supabaseAdmin.from("users").select("id, name, email, area_id").in("id", userIdsToFetch)
+    : { data: [] };
+  const userMap = new Map((users ?? []).map((u: any) => [u.id, u]));
+
+  const areaIds = [...new Set((users ?? []).map((u: any) => u.area_id).filter(Boolean))];
+  const { data: areas } = areaIds.length > 0
+    ? await supabaseAdmin.from("areas").select("id, name").in("id", areaIds)
+    : { data: [] };
+  const areaMap = new Map((areas ?? []).map((a: any) => [a.id, a]));
+
+  const { data: rawApprovals } = await supabaseAdmin
+    .from("compliment_approvals")
+    .select("id, action, observation, created_at, manager_id")
+    .eq("compliment_id", id)
+    .order("created_at");
+
+  const managerIds = [...new Set((rawApprovals ?? []).map((a: any) => a.manager_id).filter(Boolean))];
+  const { data: managers } = managerIds.length > 0
+    ? await supabaseAdmin.from("users").select("id, name").in("id", managerIds)
+    : { data: [] };
+  const managerMap = new Map((managers ?? []).map((u: any) => [u.id, u]));
+
+  const { data: rawEvals } = await supabaseAdmin
+    .from("compliment_evaluations")
+    .select("id, director_id, medal, justification, comment, created_at")
+    .eq("compliment_id", id)
+    .order("created_at");
+
+  const directorIds = [...new Set((rawEvals ?? []).map((e: any) => e.director_id).filter(Boolean))];
+  const { data: directors } = directorIds.length > 0
+    ? await supabaseAdmin.from("users").select("id, name, role").in("id", directorIds)
+    : { data: [] };
+  const directorMap = new Map((directors ?? []).map((u: any) => [u.id, u]));
+
+  const collaboratorUser = userMap.get(c.collaborator_id);
+  const collaboratorArea = collaboratorUser?.area_id ? areaMap.get(collaboratorUser.area_id) : null;
+
+  return {
+    id: c.id,
+    insured: c.insured,
+    receivedAt: c.received_at,
+    branch: c.branch,
+    reason: c.reason,
+    status: c.status,
+    attachmentUrl: c.attachment_url,
+    quarter: c.quarter,
+    year: c.year,
+    createdAt: c.created_at,
+    collaborator: collaboratorUser
+      ? { id: collaboratorUser.id, name: collaboratorUser.name, area: collaboratorArea ? { name: collaboratorArea.name } : null }
+      : null,
+    approvals: (rawApprovals ?? []).map((a: any) => ({
+      action: a.action,
+      observation: a.observation,
+      createdAt: a.created_at,
+      manager: { name: managerMap.get(a.manager_id)?.name ?? "—" },
+    })),
+    evaluations: (rawEvals ?? []).map((e: any) => ({
+      medal: e.medal,
+      justification: e.justification,
+      comment: e.comment,
+      createdAt: e.created_at,
+      director: { name: directorMap.get(e.director_id)?.name ?? "—" },
+    })),
+  };
 }
 
 export async function getCompliments(filter: ComplimentFilterInput, userId: string, userRole: string, _userAreaId: string | null) {

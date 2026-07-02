@@ -133,7 +133,7 @@ export function ComplimentList({ initialData, userRole, userId }: Props) {
         <div className="space-y-3">
           {data.map((c) => {
             const config = STATUS_CONFIG[c.status];
-            const medal = c.evaluations[0]?.medal as MedalType | undefined;
+            const medal = (c.evaluations ?? [])[0]?.medal as MedalType | undefined;
             const medalEmoji = medal ? { SPECIAL: "🏆", GOLD: "🥇", SILVER: "🥈", BRONZE: "🥉" }[medal] : null;
             return (
               <Card key={c.id} className="border-0 shadow-sm hover:shadow-md transition-shadow">

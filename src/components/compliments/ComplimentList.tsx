@@ -32,7 +32,8 @@ interface Compliment {
   quarter: number;
   year: number;
   created_at: string;
-  collaborator: { id: string; name: string };
+  collaborator: { id: string; name: string } | null;
+  submittedBy?: { id: string; name: string } | null;
   evaluations: Array<{ medal: MedalType }>;
 }
 
@@ -154,7 +155,7 @@ export function ComplimentList({ initialData, userRole, userId }: Props) {
                       <p className="font-semibold truncate">{c.insured}</p>
                       <p className="text-sm text-muted-foreground truncate mt-0.5">{c.reason}</p>
                       <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                        <span>{c.collaborator.name}</span>
+                        <span>{c.collaborator?.name ?? c.submittedBy?.name ?? "—"}</span>
                         <span>•</span>
                         <span>{format(new Date(c.received_at), "dd/MM/yyyy", { locale: ptBR })}</span>
                         {c.attachment_url && (

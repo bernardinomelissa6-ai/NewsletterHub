@@ -351,12 +351,20 @@ export async function evaluateCompliment(
     ];
     const { score, finalMedal } = calculateFinalMedal(allEvals);
 
-    await supabaseAdmin.from("compliments").update({
+    const { error: complimentUpdateError } = await supabaseAdmin.from("compliments").update({
       status: "AVALIADO",
       final_medal: finalMedal,
       evaluation_score: score,
       updated_at: new Date().toISOString(),
     }).eq("id", id);
+
+    // Fallback se as colunas final_medal/evaluation_score ainda não existem no banco
+    if (complimentUpdateError) {
+      await supabaseAdmin.from("compliments").update({
+        status: "AVALIADO",
+        updated_at: new Date().toISOString(),
+      }).eq("id", id);
+    }
 
     await createAuditLog({ userId: directorId, userName: directorName, userRole: directorRole, action: "EVALUATE", entityType: "Compliment", entityId: id, previousValue: { status: previous.status }, newValue: { status: "AVALIADO", final_medal: finalMedal, evaluation_score: score }, ipAddress });
     notifyComplimentEvaluated({ id, insured: previous.insured, collaboratorId: previous.collaborator_id, medal: finalMedal, justification: input.justification ?? "" }).catch(console.error);

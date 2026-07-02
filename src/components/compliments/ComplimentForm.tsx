@@ -29,6 +29,7 @@ interface Props {
   collaborators: Collaborator[];
   branches: Branch[];
   defaultCollaboratorName?: string;
+  defaultCollaboratorId?: string;
   currentUserName?: string;
   complimentId?: string;
   defaultValues?: Partial<CreateComplimentInput>;
@@ -56,19 +57,22 @@ async function uploadDirect(file: File, folder: string): Promise<{ url: string; 
   return { url: publicUrl, name: file.name, type: file.type };
 }
 
-export function ComplimentForm({ collaborators, branches, defaultCollaboratorName, currentUserName, complimentId, defaultValues }: Props) {
+export function ComplimentForm({ collaborators, branches, defaultCollaboratorName, defaultCollaboratorId, currentUserName, complimentId, defaultValues }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
 
-  const initialCollaboratorName = defaultCollaboratorName ?? collaborators[0]?.name ?? currentUserName ?? "";
+  // Select (multi-collaborator): use UUID so the API skips the name-lookup fallback
+  const defaultSelectValue = defaultCollaboratorId ?? collaborators[0]?.id ?? "";
+  // Input (single collaborator / COLLABORATOR role): keep name-based value
+  const defaultInputValue = defaultCollaboratorName ?? collaborators[0]?.name ?? currentUserName ?? "";
 
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<CreateComplimentInput>({
     resolver: zodResolver(createComplimentSchema),
     defaultValues: {
-      collaboratorId: initialCollaboratorName,
+      collaboratorId: collaborators.length > 1 ? defaultSelectValue : defaultInputValue,
       ...defaultValues,
     },
   });
@@ -160,14 +164,14 @@ export function ComplimentForm({ collaborators, branches, defaultCollaboratorNam
             {collaborators.length > 1 ? (
               <Select
                 onValueChange={(v) => setValue("collaboratorId", v)}
-                defaultValue={initialCollaboratorName}
+                defaultValue={defaultSelectValue}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o colaborador" />
                 </SelectTrigger>
                 <SelectContent>
                   {collaborators.map((c) => (
-                    <SelectItem key={c.id} value={c.name}>
+                    <SelectItem key={c.id} value={c.id}>
                       {c.name} {c.area ? `(${c.area.name})` : ""}
                     </SelectItem>
                   ))}

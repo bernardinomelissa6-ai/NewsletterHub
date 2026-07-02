@@ -10,22 +10,28 @@ export default async function NewComplimentPage() {
   const session = await requireAuth();
   const { role, id: userId, name: userName } = session.user;
 
-  let collaborators: any[] = [];
+  let collaborators: { id: string; name: string; area: { name: string } | null }[] = [];
+
   if (role === "ADMIN" || role === "DIRETOR_CENTRAL") {
-    const { data } = await supabaseAdmin.from("users").select("id, name, area:areas(name)").eq("is_active", true).eq("role", "COLLABORATOR").order("name");
-    collaborators = data ?? [];
+    const { data: users } = await supabaseAdmin.from("users").select("id, name, area_id").eq("is_active", true).eq("role", "COLLABORATOR").order("name");
+    const areaIds = [...new Set((users ?? []).map((u) => u.area_id).filter(Boolean))];
+    const { data: areas } = areaIds.length > 0 ? await supabaseAdmin.from("areas").select("id, name").in("id", areaIds) : { data: [] };
+    const areaMap = new Map((areas ?? []).map((a) => [a.id, a.name]));
+    collaborators = (users ?? []).map((u) => ({ id: u.id, name: u.name, area: u.area_id ? { name: areaMap.get(u.area_id) ?? "" } : null }));
   } else if (role === "MANAGER") {
-    const { data: areas } = await supabaseAdmin.from("areas").select("id").eq("manager_id", userId);
-    const areaIds = (areas ?? []).map((a) => a.id);
-    const { data } = await supabaseAdmin.from("users").select("id, name, area:areas(name)").eq("is_active", true).eq("role", "COLLABORATOR").in("area_id", areaIds).order("name");
-    collaborators = data ?? [];
+    const { data: managerAreas } = await supabaseAdmin.from("areas").select("id, name").eq("manager_id", userId);
+    const areaIds = (managerAreas ?? []).map((a) => a.id);
+    const areaMap = new Map((managerAreas ?? []).map((a) => [a.id, a.name]));
+    const { data: users } = areaIds.length > 0
+      ? await supabaseAdmin.from("users").select("id, name, area_id").eq("is_active", true).eq("role", "COLLABORATOR").in("area_id", areaIds).order("name")
+      : { data: [] };
+    collaborators = (users ?? []).map((u) => ({ id: u.id, name: u.name, area: u.area_id ? { name: areaMap.get(u.area_id) ?? "" } : null }));
   } else {
-    const { data } = await supabaseAdmin.from("users").select("id, name, area:areas(name)").eq("id", userId);
-    collaborators = data ?? [];
+    const { data: users } = await supabaseAdmin.from("users").select("id, name").eq("id", userId);
+    collaborators = (users ?? []).map((u) => ({ id: u.id, name: u.name, area: null }));
   }
 
   const branches = await getBranches(true);
-  const defaultCollaboratorName = collaborators[0]?.name ?? userName ?? "";
 
   return (
     <div className="max-w-2xl">
@@ -35,7 +41,7 @@ export default async function NewComplimentPage() {
           Registre um elogio recebido de cliente, segurado, parceiro ou corretor
         </p>
       </div>
-      <ComplimentForm collaborators={collaborators} branches={branches} defaultCollaboratorName={defaultCollaboratorName} currentUserName={userName ?? ""} />
+      <ComplimentForm collaborators={collaborators} branches={branches} defaultCollaboratorName={collaborators[0]?.name ?? userName ?? ""} defaultCollaboratorId={collaborators[0]?.id} currentUserName={userName ?? ""} />
     </div>
   );
 }

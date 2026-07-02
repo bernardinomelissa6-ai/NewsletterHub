@@ -304,13 +304,24 @@ export async function evaluateCompliment(
 
   const { data: existingEvals } = await supabaseAdmin
     .from("compliment_evaluations")
-    .select("director_id, director:users!director_id(role)")
+    .select("director_id, medal")
     .eq("compliment_id", id);
 
-  const evals = existingEvals ?? [];
-  const regularEvals = evals.filter((e: any) => !isCentral(e.director?.role ?? ""));
-  const centralEvals = evals.filter((e: any) => isCentral(e.director?.role ?? ""));
-  const myEval = evals.find((e: any) => e.director_id === directorId);
+  const evalDirectorIds = (existingEvals ?? []).map((e: any) => e.director_id).filter(Boolean);
+  const { data: evalDirectors } = evalDirectorIds.length > 0
+    ? await supabaseAdmin.from("users").select("id, role").in("id", evalDirectorIds)
+    : { data: [] };
+
+  const directorRoleMap = new Map((evalDirectors ?? []).map((u: any) => [u.id, u.role]));
+  const evals = (existingEvals ?? []).map((e: any) => ({
+    director_id: e.director_id,
+    medal: e.medal as MedalType,
+    role: directorRoleMap.get(e.director_id) ?? "DIRECTOR",
+  }));
+
+  const regularEvals = evals.filter((e) => !isCentral(e.role));
+  const centralEvals = evals.filter((e) => isCentral(e.role));
+  const myEval = evals.find((e) => e.director_id === directorId);
 
   if (myEval) throw new Error("Você já avaliou este elogio");
 
@@ -373,12 +384,18 @@ export async function reevaluateCompliment(
 
   const { data: allEvals } = await supabaseAdmin
     .from("compliment_evaluations")
-    .select("medal, director_id, director:users!director_id(role)")
+    .select("medal, director_id")
     .eq("compliment_id", id);
+
+  const reevalDirIds = (allEvals ?? []).map((e: any) => e.director_id).filter(Boolean);
+  const { data: reevalDirs } = reevalDirIds.length > 0
+    ? await supabaseAdmin.from("users").select("id, role").in("id", reevalDirIds)
+    : { data: [] };
+  const reevalRoleMap = new Map((reevalDirs ?? []).map((u: any) => [u.id, u.role]));
 
   const evalList = (allEvals ?? []).map((e: any) => ({
     medal: e.medal as MedalType,
-    isCentralDirector: isCentral(e.director?.role ?? ""),
+    isCentralDirector: isCentral(reevalRoleMap.get(e.director_id) ?? ""),
   }));
 
   const centralEval = evalList.find((e) => e.isCentralDirector);

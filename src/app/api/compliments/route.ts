@@ -1,8 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createCompliment, getCompliments } from "@/services/compliment.service";
 import { createComplimentSchema, complimentFilterSchema } from "@/lib/validations/compliment.schema";
 import { uploadFile, ALLOWED_COMPLIMENT_TYPES } from "@/lib/storage/supabase-storage";
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function resolveCollaboratorId(nameOrId: string, fallbackId: string): Promise<string> {
+  if (UUID_REGEX.test(nameOrId)) return nameOrId;
+  const { data } = await supabaseAdmin
+    .from("users")
+    .select("id")
+    .ilike("name", nameOrId.trim())
+    .eq("is_active", true)
+    .limit(1);
+  return data?.[0]?.id ?? fallbackId;
+}
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -41,6 +55,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
     }
 
+    const resolvedCollaboratorId = await resolveCollaboratorId(parsed.data.collaboratorId, session.user.id);
+
     let attachmentUrl: string | undefined;
     let attachmentName: string | undefined;
     let attachmentType: string | undefined;
@@ -56,7 +72,7 @@ export async function POST(req: NextRequest) {
     const ipAddress = req.headers.get("x-forwarded-for") ?? req.headers.get("x-real-ip") ?? undefined;
 
     const compliment = await createCompliment(
-      parsed.data,
+      { ...parsed.data, collaboratorId: resolvedCollaboratorId },
       session.user.id,
       session.user.name ?? "Desconhecido",
       session.user.role,

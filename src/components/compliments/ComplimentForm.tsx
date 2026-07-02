@@ -28,36 +28,36 @@ interface Collaborator {
 interface Props {
   collaborators: Collaborator[];
   branches: Branch[];
-  defaultCollaboratorId?: string;
+  defaultCollaboratorName?: string;
   currentUserName?: string;
   complimentId?: string;
   defaultValues?: Partial<CreateComplimentInput>;
 }
 
-export function ComplimentForm({ collaborators, branches, defaultCollaboratorId, currentUserName, complimentId, defaultValues }: Props) {
+export function ComplimentForm({ collaborators, branches, defaultCollaboratorName, currentUserName, complimentId, defaultValues }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
 
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<CreateComplimentInput>({
+  const initialCollaboratorName = defaultCollaboratorName ?? collaborators[0]?.name ?? currentUserName ?? "";
+
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<CreateComplimentInput>({
     resolver: zodResolver(createComplimentSchema),
     defaultValues: {
-      collaboratorId: defaultCollaboratorId ?? "",
+      collaboratorId: initialCollaboratorName,
       ...defaultValues,
     },
   });
 
-  const collaboratorId = watch("collaboratorId");
-
   async function onSubmit(data: CreateComplimentInput) {
-    if (!file) { setFileError("Anexo obrigatório (PDF ou e-mail)"); return; }
+    if (!file && !complimentId) { setFileError("Anexo obrigatório (PDF ou e-mail)"); return; }
     setFileError(null);
     setLoading(true);
     try {
       const formData = new FormData();
       Object.entries(data).forEach(([k, v]) => formData.append(k, v as string));
-      formData.append("attachment", file);
+      if (file) formData.append("attachment", file);
 
       const url = complimentId ? `/api/compliments/${complimentId}` : "/api/compliments";
       const method = complimentId ? "PUT" : "POST";
@@ -107,27 +107,27 @@ export function ComplimentForm({ collaborators, branches, defaultCollaboratorId,
 
           <div className="space-y-2">
             <Label>Colaborador *</Label>
-            {collaborators.length <= 1 ? (
-              <Input
-                defaultValue={collaborators[0]?.name ?? currentUserName ?? ""}
-                placeholder="Nome do colaborador"
-              />
-            ) : (
+            {collaborators.length > 1 ? (
               <Select
                 onValueChange={(v) => setValue("collaboratorId", v)}
-                defaultValue={defaultCollaboratorId}
+                defaultValue={initialCollaboratorName}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o colaborador" />
                 </SelectTrigger>
                 <SelectContent>
                   {collaborators.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
+                    <SelectItem key={c.id} value={c.name}>
                       {c.name} {c.area ? `(${c.area.name})` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+            ) : (
+              <Input
+                placeholder="Nome do colaborador"
+                {...register("collaboratorId")}
+              />
             )}
             {errors.collaboratorId && <p className="text-xs text-destructive">{errors.collaboratorId.message}</p>}
           </div>

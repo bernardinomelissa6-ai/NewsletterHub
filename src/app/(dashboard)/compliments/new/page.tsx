@@ -25,7 +25,7 @@ export default async function NewComplimentPage() {
   }
 
   const branches = await getBranches(true);
-  const defaultCollaboratorId = collaborators.length === 1 ? collaborators[0]?.id : undefined;
+  const defaultCollaboratorName = collaborators[0]?.name ?? userName ?? "";
 
   return (
     <div className="max-w-2xl">
@@ -35,7 +35,7 @@ export default async function NewComplimentPage() {
           Registre um elogio recebido de cliente, segurado, parceiro ou corretor
         </p>
       </div>
-      <ComplimentForm collaborators={collaborators} branches={branches} defaultCollaboratorId={defaultCollaboratorId} currentUserName={userName ?? ""} />
+      <ComplimentForm collaborators={collaborators} branches={branches} defaultCollaboratorName={defaultCollaboratorName} currentUserName={userName ?? ""} />
     </div>
   );
 }

@@ -23,7 +23,7 @@ export default async function NewTrainingPage() {
     collaborators = data ?? [];
   }
 
-  const defaultCollaboratorId = collaborators.length === 1 ? collaborators[0]?.id : undefined;
+  const defaultCollaboratorName = collaborators[0]?.name ?? userName ?? "";
 
   return (
     <div className="max-w-2xl">
@@ -33,7 +33,7 @@ export default async function NewTrainingPage() {
           Registre um treinamento, curso ou consultoria realizada
         </p>
       </div>
-      <TrainingForm collaborators={collaborators} defaultCollaboratorId={defaultCollaboratorId} currentUserName={userName ?? ""} />
+      <TrainingForm collaborators={collaborators} defaultCollaboratorName={defaultCollaboratorName} currentUserName={userName ?? ""} />
     </div>
   );
 }

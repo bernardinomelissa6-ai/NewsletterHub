@@ -28,18 +28,20 @@ interface Collaborator {
 
 interface Props {
   collaborators: Collaborator[];
-  defaultCollaboratorId?: string;
+  defaultCollaboratorName?: string;
   currentUserName?: string;
 }
 
-export function TrainingForm({ collaborators, defaultCollaboratorId, currentUserName }: Props) {
+export function TrainingForm({ collaborators, defaultCollaboratorName, currentUserName }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
 
+  const initialCollaboratorName = defaultCollaboratorName ?? collaborators[0]?.name ?? currentUserName ?? "";
+
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<CreateTrainingInput>({
     resolver: zodResolver(createTrainingSchema),
-    defaultValues: { collaboratorId: defaultCollaboratorId ?? "" },
+    defaultValues: { collaboratorId: initialCollaboratorName },
   });
 
   async function onSubmit(data: CreateTrainingInput) {
@@ -106,24 +108,27 @@ export function TrainingForm({ collaborators, defaultCollaboratorId, currentUser
 
           <div className="space-y-2">
             <Label>Colaborador *</Label>
-            {collaborators.length <= 1 ? (
-              <Input
-                defaultValue={collaborators[0]?.name ?? currentUserName ?? ""}
-                placeholder="Nome do colaborador"
-              />
-            ) : (
-              <Select onValueChange={(v) => setValue("collaboratorId", v)} defaultValue={defaultCollaboratorId}>
+            {collaborators.length > 1 ? (
+              <Select
+                onValueChange={(v) => setValue("collaboratorId", v)}
+                defaultValue={initialCollaboratorName}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o colaborador" />
                 </SelectTrigger>
                 <SelectContent>
                   {collaborators.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
+                    <SelectItem key={c.id} value={c.name}>
                       {c.name} {c.area ? `(${c.area.name})` : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+            ) : (
+              <Input
+                placeholder="Nome do colaborador"
+                {...register("collaboratorId")}
+              />
             )}
             {errors.collaboratorId && <p className="text-xs text-destructive">{errors.collaboratorId.message}</p>}
           </div>

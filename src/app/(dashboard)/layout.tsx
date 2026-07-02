@@ -1,6 +1,5 @@
 ﻿import { requireAuth } from "@/lib/auth/session";
 import { Sidebar } from "@/components/layout/sidebar/Sidebar";
-import { RightPanel } from "@/components/layout/right-panel/RightPanel";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { countUnread } from "@/services/notification.service";
 import type { Role } from "@/lib/supabase/types";
@@ -20,8 +19,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
             {children}
           </div>
         </main>
-
-        <RightPanel />
       </div>
     </SessionProvider>
   );

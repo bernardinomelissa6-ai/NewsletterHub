@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils/cn";
 import {
   LayoutDashboard, Star, BookOpen, Trophy, Users, Building2,
   ClipboardList, FileText, Bell, Settings, Shield, Clock,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, Award,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -24,6 +24,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/meus-elogios", label: "Meus Reconhecimentos", icon: Award, roles: ["COLLABORATOR"] },
   { href: "/compliments", label: "Elogios", icon: Star },
   { href: "/compliments/pending-approval", label: "Aprovar Elogios", icon: ClipboardList, roles: ["MANAGER", "ADMIN", "DIRETOR_CENTRAL"] },
   { href: "/compliments/pending-evaluation", label: "Avaliar Elogios", icon: Shield, roles: ["DIRECTOR", "ADMIN", "DIRETOR_CENTRAL"] },

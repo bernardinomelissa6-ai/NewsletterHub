@@ -9,22 +9,26 @@ export const metadata: Metadata = { title: "Avaliação de Elogios" };
 async function getAdminPendingEvaluations() {
   const { data: rawCompliments } = await supabaseAdmin
     .from("compliments")
-    .select("id, insured, received_at, branch, reason, status, quarter, year, created_at, collaborator_id")
+    .select("id, insured, received_at, branch, reason, status, quarter, year, created_at, collaborator_id, submitted_by_id")
     .eq("status", "PENDENTE_AVALIACAO")
     .order("created_at");
 
   if (!rawCompliments || rawCompliments.length === 0) return [];
 
-  const collIds = [...new Set(rawCompliments.map((c) => c.collaborator_id).filter(Boolean))];
   const complimentIds = rawCompliments.map((c) => c.id);
 
-  const [{ data: collData }, { data: approvalsData }, { data: evaluationsData }] = await Promise.all([
-    supabaseAdmin.from("users").select("id, name, area:areas(name)").in("id", collIds),
+  const allUserIds = [...new Set([
+    ...rawCompliments.map((c) => c.collaborator_id),
+    ...rawCompliments.map((c) => c.submitted_by_id),
+  ].filter(Boolean))];
+
+  const [{ data: usersData }, { data: approvalsData }, { data: evaluationsData }] = await Promise.all([
+    allUserIds.length > 0 ? supabaseAdmin.from("users").select("id, name, area:areas(name)").in("id", allUserIds) : Promise.resolve({ data: [] }),
     supabaseAdmin.from("compliment_approvals").select("compliment_id, action, observation, created_at, manager_id").in("compliment_id", complimentIds),
     supabaseAdmin.from("compliment_evaluations").select("compliment_id, medal, justification, director_id").in("compliment_id", complimentIds),
   ]);
 
-  const collMap = new Map((collData ?? []).map((u: any) => [u.id, u]));
+  const userMap = new Map((usersData ?? []).map((u: any) => [u.id, u]));
 
   const managerIds = [...new Set((approvalsData ?? []).map((a: any) => a.manager_id).filter(Boolean))];
   const directorIds = [...new Set((evaluationsData ?? []).map((e: any) => e.director_id).filter(Boolean))];
@@ -39,15 +43,18 @@ async function getAdminPendingEvaluations() {
 
   return rawCompliments.map((c) => ({
     ...c,
-    collaborator: collMap.get(c.collaborator_id) ?? { id: c.collaborator_id, name: "Desconhecido", area: null },
+    collaborator:
+      userMap.get(c.collaborator_id) ??
+      userMap.get(c.submitted_by_id) ??
+      { id: null, name: "—", area: null },
     approvals: (approvalsData ?? [])
       .filter((a: any) => a.compliment_id === c.id)
-      .map((a: any) => ({ ...a, manager: managerMap.get(a.manager_id) ?? { name: "Desconhecido" } })),
+      .map((a: any) => ({ ...a, manager: managerMap.get(a.manager_id) ?? { name: "—" } })),
     evaluations: (evaluationsData ?? [])
       .filter((e: any) => e.compliment_id === c.id)
       .map((e: any) => ({
         ...e,
-        director: directorMap.get(e.director_id) ?? { name: "Desconhecido", role: "DIRECTOR" },
+        director: directorMap.get(e.director_id) ?? { name: "—", role: "DIRECTOR" },
       })),
   }));
 }

@@ -10,11 +10,12 @@ const ROLE_ROUTES: Record<string, string[]> = {
   "/audit": ["ADMIN"],
   "/settings/deadlines": ["ADMIN"],
   "/settings/branches": ["ADMIN"],
-  "/compliments/pending-approval": ["MANAGER", "ADMIN"],
-  "/compliments/pending-evaluation": ["DIRECTOR", "ADMIN"],
-  "/rankings/collaborators": ["MANAGER", "DIRECTOR", "ADMIN"],
+  "/compliments/pending-approval": ["MANAGER", "ADMIN", "DIRETOR_CENTRAL"],
+  "/compliments/pending-evaluation": ["DIRECTOR", "ADMIN", "DIRETOR_CENTRAL"],
+  "/rankings/collaborators": ["MANAGER", "DIRECTOR", "ADMIN", "DIRETOR_CENTRAL"],
+  "/rankings/areas": ["DIRECTOR", "ADMIN", "DIRETOR_CENTRAL"],
   "/rankings/teams": ["MANAGER"],
-  "/reports": ["ADMIN", "DIRECTOR", "MANAGER"],
+  "/reports": ["ADMIN", "DIRECTOR", "MANAGER", "DIRETOR_CENTRAL"],
 };
 
 export default auth((req) => {

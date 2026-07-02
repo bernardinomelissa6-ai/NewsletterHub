@@ -192,7 +192,7 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
                         medal === m ? MEDAL_SCORE_COLORS[m] + " border-current" : "border-border hover:bg-accent"
                       }`}
                     >
-                      <MedalIcon type={m} size={52} />
+                      <MedalIcon type={m} size={64} />
                       <span className="text-base font-semibold">{MEDAL_LABELS[m]}</span>
                     </button>
                   ))}

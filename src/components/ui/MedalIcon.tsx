@@ -1,22 +1,39 @@
 import type { MedalType } from "@/lib/supabase/types";
 
 interface Colors {
-  o1: string; o2: string; // outer rosette gradient
-  i1: string; i2: string; // inner circle gradient
-  r1: string; r2: string; // ribbon gradient
+  o1: string; o2: string; o3: string; // outer rosette
+  i1: string; i2: string; i3: string; // inner circle
+  r1: string; r2: string;             // ribbon
 }
 
 const CONFIGS: Record<MedalType, Colors> = {
-  BRONZE:  { o1: "#D4956A", o2: "#7A4520", i1: "#EDBA8A", i2: "#9B6234", r1: "#C47030", r2: "#7A4520" },
-  SILVER:  { o1: "#E2E2E2", o2: "#8A8A8A", i1: "#F6F6F6", i2: "#ADADAD", r1: "#CACACA", r2: "#8A8A8A" },
-  GOLD:    { o1: "#F4CC34", o2: "#9A7200", i1: "#FFE466", i2: "#C89800", r1: "#E2B000", r2: "#906800" },
-  SPECIAL: { o1: "#F4CC34", o2: "#9A7200", i1: "#FFE466", i2: "#C89800", r1: "#E83232", r2: "#900000" },
+  BRONZE: {
+    o1: "#D4956A", o2: "#9B6234", o3: "#6B3E18",
+    i1: "#F0C090", i2: "#C47840", i3: "#8B5220",
+    r1: "#C47030", r2: "#7A3C10",
+  },
+  SILVER: {
+    o1: "#EBEBEB", o2: "#ADADAD", o3: "#787878",
+    i1: "#FFFFFF", i2: "#D0D0D0", i3: "#909090",
+    r1: "#CCCCCC", r2: "#888888",
+  },
+  GOLD: {
+    o1: "#F8D840", o2: "#C89800", o3: "#806000",
+    i1: "#FFF0A0", i2: "#E8B800", i3: "#A07800",
+    r1: "#E0A800", r2: "#805800",
+  },
+  SPECIAL: {
+    o1: "#F8D840", o2: "#C89800", o3: "#806000",
+    i1: "#FFF0A0", i2: "#E8B800", i3: "#A07800",
+    r1: "#D42020", r2: "#780000",
+  },
 };
 
 function rosettePath(cx: number, cy: number, R: number, r: number, n: number): string {
   let d = "";
-  for (let i = 0; i < n * 2; i++) {
-    const a = (i * Math.PI) / n - Math.PI / 2;
+  const total = n * 2;
+  for (let i = 0; i < total; i++) {
+    const a = (i / total) * Math.PI * 2 - Math.PI / 2;
     const radius = i % 2 === 0 ? R : r;
     const x = (cx + Math.cos(a) * radius).toFixed(2);
     const y = (cy + Math.sin(a) * radius).toFixed(2);
@@ -25,52 +42,78 @@ function rosettePath(cx: number, cy: number, R: number, r: number, n: number): s
   return d + "Z";
 }
 
-export function MedalIcon({ type, size = 60 }: { type: MedalType; size?: number }) {
+export function MedalIcon({ type, size = 72 }: { type: MedalType; size?: number }) {
   const c = CONFIGS[type];
   const t = type;
-  const cx = 35, cy = 36;
-  const path = rosettePath(cx, cy, 29, 23, 20);
+
+  // Viewport 100 x 132
+  const cx = 50, cy = 50;
+  const OR = 46;   // outer tip of teeth
+  const IR = 36;   // inner valley of teeth (10px teeth = very visible)
+  const CR = 32;   // inner metallic circle
+  const n  = 28;   // number of teeth
+
+  const rosette = rosettePath(cx, cy, OR, IR, n);
+  const ry = cy + CR; // ribbon starts at bottom of inner circle = y 82
 
   return (
     <svg
       width={size}
-      height={Math.round(size * 1.28)}
-      viewBox="0 0 70 90"
+      height={Math.round(size * 1.32)}
+      viewBox="0 0 100 132"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
       <defs>
-        <radialGradient id={`mo-${t}`} cx="40%" cy="35%" r="65%">
-          <stop offset="0%" stopColor={c.o1} />
-          <stop offset="100%" stopColor={c.o2} />
+        {/* Outer rosette gradient */}
+        <radialGradient id={`ro-${t}`} cx="42%" cy="36%" r="64%">
+          <stop offset="0%"   stopColor={c.o1} />
+          <stop offset="60%"  stopColor={c.o2} />
+          <stop offset="100%" stopColor={c.o3} />
         </radialGradient>
-        <radialGradient id={`mi-${t}`} cx="36%" cy="28%" r="72%">
-          <stop offset="0%" stopColor={c.i1} />
-          <stop offset="100%" stopColor={c.i2} />
+
+        {/* Inner circle gradient — bright center, darker edge */}
+        <radialGradient id={`ri-${t}`} cx="38%" cy="30%" r="70%">
+          <stop offset="0%"   stopColor={c.i1} />
+          <stop offset="50%"  stopColor={c.i2} />
+          <stop offset="100%" stopColor={c.i3} />
         </radialGradient>
-        <linearGradient id={`mrl-${t}`} x1="1" y1="0" x2="0" y2="0">
-          <stop offset="0%" stopColor={c.r1} />
-          <stop offset="100%" stopColor={c.r2} />
+
+        {/* Ribbon left gradient */}
+        <linearGradient id={`rrl-${t}`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%"   stopColor={c.r2} />
+          <stop offset="100%" stopColor={c.r1} />
         </linearGradient>
-        <linearGradient id={`mrr-${t}`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor={c.r1} />
+
+        {/* Ribbon right gradient */}
+        <linearGradient id={`rrr-${t}`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%"   stopColor={c.r1} />
           <stop offset="100%" stopColor={c.r2} />
         </linearGradient>
       </defs>
 
-      {/* Left ribbon */}
-      <path d="M35,56 L26,56 L12,88 L25,77 Z" fill={`url(#mrl-${t})`} />
-      {/* Right ribbon */}
-      <path d="M35,56 L44,56 L58,88 L45,77 Z" fill={`url(#mrr-${t})`} />
+      {/* ── Left ribbon ── wide trapezoid with V-notch at bottom */}
+      <path
+        d={`M${cx},${ry} L${cx - 16},${ry + 2} L${cx - 32},128 L${cx - 14},114 Z`}
+        fill={`url(#rrl-${t})`}
+      />
+      {/* ── Right ribbon ── mirror */}
+      <path
+        d={`M${cx},${ry} L${cx + 16},${ry + 2} L${cx + 32},128 L${cx + 14},114 Z`}
+        fill={`url(#rrr-${t})`}
+      />
 
-      {/* Outer serrated rosette */}
-      <path d={path} fill={`url(#mo-${t})`} />
+      {/* ── Outer serrated rosette ring ── */}
+      <path d={rosette} fill={`url(#ro-${t})`} />
 
-      {/* Inner metallic circle */}
-      <circle cx={cx} cy={cy} r={20} fill={`url(#mi-${t})`} />
+      {/* ── Decorative inner ring (slightly darker than circle) ── */}
+      <circle cx={cx} cy={cy} r={CR + 2} fill={c.o2} />
 
-      {/* Subtle shine highlight */}
-      <ellipse cx={cx - 5} cy={cy - 7} rx={7} ry={5} fill="white" opacity="0.22" />
+      {/* ── Main metallic inner circle ── */}
+      <circle cx={cx} cy={cy} r={CR} fill={`url(#ri-${t})`} />
+
+      {/* ── Specular highlight ── */}
+      <ellipse cx={cx - 9} cy={cy - 10} rx={11} ry={8} fill="white" opacity="0.20" />
     </svg>
   );
 }

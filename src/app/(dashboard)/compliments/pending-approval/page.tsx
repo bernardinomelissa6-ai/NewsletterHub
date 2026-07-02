@@ -6,11 +6,34 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Aprovação de Elogios" };
 
+async function getAdminPendingApprovals() {
+  const { data: rawCompliments } = await supabaseAdmin
+    .from("compliments")
+    .select("id, insured, received_at, branch, reason, status, quarter, year, created_at, attachment_url, collaborator_id")
+    .eq("status", "PENDENTE_APROVACAO")
+    .order("created_at");
+
+  if (!rawCompliments || rawCompliments.length === 0) return [];
+
+  const collIds = [...new Set(rawCompliments.map((c) => c.collaborator_id).filter(Boolean))];
+  const { data: collData } = await supabaseAdmin
+    .from("users")
+    .select("id, name, area_id, area:areas(name)")
+    .in("id", collIds);
+
+  const collMap = new Map((collData ?? []).map((u: any) => [u.id, u]));
+
+  return rawCompliments.map((c) => ({
+    ...c,
+    collaborator: collMap.get(c.collaborator_id) ?? { id: c.collaborator_id, name: "Desconhecido", area: null },
+  }));
+}
+
 export default async function PendingApprovalPage() {
   const session = await requireRole("MANAGER", "ADMIN");
 
   const compliments = session.user.role === "ADMIN"
-    ? ((await supabaseAdmin.from("compliments").select("id, insured, received_at, branch, reason, status, quarter, year, created_at, attachment_url, collaborator:users!collaborator_id(id, name, area:areas(name))").eq("status", "PENDENTE_APROVACAO").order("created_at")).data ?? [])
+    ? await getAdminPendingApprovals()
     : await getPendingApprovals(session.user.id);
 
   return (

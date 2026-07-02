@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Shield, User, Calendar, Loader2, CheckCircle2 } from "lucide-react";
 import { MEDAL_LABELS } from "@/lib/utils/ranking";
+import { MedalIcon } from "@/components/ui/MedalIcon";
 import type { MedalType } from "@/lib/supabase/types";
 
 interface Evaluation {
@@ -36,19 +37,7 @@ interface Compliment {
 }
 
 const MEDALS: MedalType[] = ["BRONZE", "SILVER", "GOLD", "SPECIAL"];
-const MEDAL_EMOJI: Record<Exclude<MedalType, "SPECIAL">, string> = { GOLD: "🥇", SILVER: "🥈", BRONZE: "🥉" };
 
-function EspecialMedalIcon() {
-  return (
-    <div className="w-11 h-11 rounded-full flex items-center justify-center"
-      style={{ background: "radial-gradient(circle at 35% 35%, #fde68a, #d97706)", boxShadow: "0 0 0 3px #b45309, inset 0 0 0 3px rgba(0,0,0,0.1)" }}>
-      <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center"
-        style={{ boxShadow: "inset 0 2px 4px rgba(0,0,0,0.3)" }}>
-        <span className="text-amber-200 text-base leading-none">★</span>
-      </div>
-    </div>
-  );
-}
 const MEDAL_SCORE_COLORS: Record<MedalType, string> = {
   SPECIAL: "text-purple-700 bg-purple-100 border-purple-300",
   GOLD: "text-yellow-700 bg-yellow-100 border-yellow-300",
@@ -199,15 +188,11 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
                       key={m}
                       type="button"
                       onClick={() => setMedal(m)}
-                      className={`flex items-center gap-4 px-4 py-3 rounded-lg border-2 text-sm font-medium transition-all text-left ${
+                      className={`flex items-center gap-4 px-4 py-2.5 rounded-lg border-2 font-medium transition-all text-left ${
                         medal === m ? MEDAL_SCORE_COLORS[m] + " border-current" : "border-border hover:bg-accent"
                       }`}
                     >
-                      {m === "SPECIAL" ? (
-                        <EspecialMedalIcon />
-                      ) : (
-                        <span className="text-4xl leading-none">{MEDAL_EMOJI[m as Exclude<MedalType, "SPECIAL">]}</span>
-                      )}
+                      <MedalIcon type={m} size={52} />
                       <span className="text-base font-semibold">{MEDAL_LABELS[m]}</span>
                     </button>
                   ))}

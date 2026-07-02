@@ -25,8 +25,8 @@ import type {
 const COMPLIMENT_LIST_SELECT = `
   id, insured, received_at, branch, reason, status,
   attachment_url, quarter, year, created_at,
+  submitted_by_id,
   collaborator:users!collaborator_id(id, name),
-  submittedBy:users!submitted_by_id(id, name),
   evaluations:compliment_evaluations(medal)
 `;
 

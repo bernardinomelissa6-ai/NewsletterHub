@@ -7,19 +7,32 @@ import type { Metadata } from "next";
 export const metadata: Metadata = { title: "Aprovação de Elogios" };
 
 async function getAdminPendingApprovals() {
-  const { data } = await supabaseAdmin
+  const { data: rawCompliments } = await supabaseAdmin
     .from("compliments")
-    .select(`
-      id, insured, received_at, branch, reason, status, quarter, year, created_at, attachment_url,
-      collaborator:users!collaborator_id(id, name, area:areas(name)),
-      submittedBy:users!submitted_by_id(id, name)
-    `)
+    .select("id, insured, received_at, branch, reason, status, quarter, year, created_at, attachment_url, collaborator_id, submitted_by_id")
     .eq("status", "PENDENTE_APROVACAO")
     .order("created_at");
 
-  return (data ?? []).map((c: any) => ({
+  if (!rawCompliments || rawCompliments.length === 0) return [];
+
+  const allUserIds = [...new Set([
+    ...rawCompliments.map((c) => c.collaborator_id),
+    ...rawCompliments.map((c) => c.submitted_by_id),
+  ].filter(Boolean))];
+
+  const { data: usersData } = await supabaseAdmin
+    .from("users")
+    .select("id, name, area:areas(name)")
+    .in("id", allUserIds);
+
+  const userMap = new Map((usersData ?? []).map((u: any) => [u.id, u]));
+
+  return rawCompliments.map((c) => ({
     ...c,
-    collaborator: c.collaborator ?? c.submittedBy ?? { id: null, name: "—", area: null },
+    collaborator:
+      userMap.get(c.collaborator_id) ??
+      userMap.get(c.submitted_by_id) ??
+      { id: null, name: "—", area: null },
   }));
 }
 

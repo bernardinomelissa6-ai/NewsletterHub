@@ -20,19 +20,36 @@ async function getAdminPendingApprovals() {
     ...rawCompliments.map((c) => c.submitted_by_id),
   ].filter(Boolean))];
 
-  const { data: usersData } = await supabaseAdmin
-    .from("users")
-    .select("id, name, area:areas(name)")
-    .in("id", allUserIds);
+  // Query users without FK join (area:areas(name) can break the whole query)
+  const { data: usersRaw } = allUserIds.length > 0
+    ? await supabaseAdmin.from("users").select("id, name, area_id").in("id", allUserIds)
+    : { data: [] };
 
-  const userMap = new Map((usersData ?? []).map((u: any) => [u.id, u]));
+  // Resolve area names separately
+  const areaIds = [...new Set((usersRaw ?? []).map((u: any) => u.area_id).filter(Boolean))];
+  const { data: areasData } = areaIds.length > 0
+    ? await supabaseAdmin.from("areas").select("id, name").in("id", areaIds)
+    : { data: [] };
+  const areaMap = new Map((areasData ?? []).map((a: any) => [a.id, a.name]));
+
+  const userMap = new Map((usersRaw ?? []).map((u: any) => [u.id, {
+    id: u.id, name: u.name,
+    area: u.area_id ? { name: areaMap.get(u.area_id) ?? "" } : null,
+  }]));
+
+  // Audit log fallback for records with no collaborator_id and no submitted_by_id
+  const orphanIds = rawCompliments.filter((c) => !c.collaborator_id && !c.submitted_by_id).map((c) => c.id);
+  const { data: auditData } = orphanIds.length > 0
+    ? await supabaseAdmin.from("audit_logs").select("entity_id, user_name").eq("action", "CREATE").eq("entity_type", "Compliment").in("entity_id", orphanIds)
+    : { data: [] };
+  const auditMap = new Map((auditData ?? []).map((a: any) => [a.entity_id, a.user_name]));
 
   return rawCompliments.map((c) => ({
     ...c,
     collaborator:
       userMap.get(c.collaborator_id) ??
       userMap.get(c.submitted_by_id) ??
-      { id: null, name: "—", area: null },
+      (auditMap.has(c.id) ? { id: null, name: auditMap.get(c.id)!, area: null } : { id: null, name: "—", area: null }),
   }));
 }
 

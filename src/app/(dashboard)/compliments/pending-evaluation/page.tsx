@@ -101,6 +101,7 @@ export default async function PendingEvaluationPage() {
         compliments={compliments}
         currentUserId={userId}
         isCentralDirector={isCentralDirector}
+        userRole={role}
       />
     </div>
   );

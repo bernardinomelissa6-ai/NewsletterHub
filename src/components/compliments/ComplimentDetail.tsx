@@ -45,7 +45,7 @@ interface Props {
     createdAt: Date | string;
     collaborator: { id: string; name: string; area?: { name: string } | null } | null;
     approvals: Array<{ action: string; observation: string | null; createdAt: string; manager: { name: string } }>;
-    evaluations: Array<{ medal: MedalType; justification: string; comment: string | null; createdAt: string; director: { name: string } }>;
+    evaluations: Array<{ director_id: string; medal: MedalType; justification: string; comment: string | null; createdAt: string; director: { name: string } }>;
   };
   userRole: string;
   userId: string;
@@ -58,6 +58,10 @@ export function ComplimentDetail({ compliment: c, userRole, userId }: Props) {
 
   const canEdit = c.status === "DEVOLVIDO_PARA_AJUSTE" && (c.collaborator?.id === userId || userRole === "ADMIN");
   const isAdmin = userRole === "ADMIN";
+  const canSeeAllEvaluations = userRole === "ADMIN" || userRole === "DIRETOR_CENTRAL";
+  const visibleEvaluations = canSeeAllEvaluations
+    ? c.evaluations
+    : c.evaluations.filter((e) => e.director_id === userId);
 
   async function handleDelete() {
     setDeleting(true);
@@ -171,13 +175,15 @@ export function ComplimentDetail({ compliment: c, userRole, userId }: Props) {
       )}
 
       {/* Evaluation */}
-      {c.evaluations.length > 0 && (
+      {visibleEvaluations.length > 0 && (
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Avaliação do Diretor</CardTitle>
+            <CardTitle className="text-base">
+              {canSeeAllEvaluations ? "Avaliações dos Diretores" : "Minha Avaliação"}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            {c.evaluations.map((e, i) => (
+            {visibleEvaluations.map((e, i) => (
               <div key={i} className="space-y-2">
                 <div className="flex items-center gap-2">
                   <span className="text-2xl">{MEDAL_EMOJI[e.medal]}</span>

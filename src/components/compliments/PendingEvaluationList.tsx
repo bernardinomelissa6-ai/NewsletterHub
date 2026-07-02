@@ -52,9 +52,11 @@ interface Props {
   compliments: Compliment[];
   currentUserId: string;
   isCentralDirector: boolean;
+  userRole: string;
 }
 
-export function PendingEvaluationList({ compliments, currentUserId, isCentralDirector }: Props) {
+export function PendingEvaluationList({ compliments, currentUserId, isCentralDirector, userRole }: Props) {
+  const canSeeAllEvaluations = userRole === "ADMIN" || userRole === "DIRETOR_CENTRAL";
   const router = useRouter();
   const [selected, setSelected] = useState<Compliment | null>(null);
   const [mode, setMode] = useState<Mode>("detail");
@@ -146,12 +148,23 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
                     </div>
                     {evaluations.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-2">
-                        {evaluations.map((ev, i) => (
-                          <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-muted border flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3 text-green-600" />
-                            {ev.director.role === "DIRETOR_CENTRAL" ? "Dir. Central" : ev.director.name}: {MEDAL_LABELS[ev.medal]}
-                          </span>
-                        ))}
+                        {canSeeAllEvaluations
+                          ? evaluations.map((ev, i) => (
+                              <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-muted border flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3 text-green-600" />
+                                {ev.director.role === "DIRETOR_CENTRAL" ? "Dir. Central" : ev.director.name}: {MEDAL_LABELS[ev.medal]}
+                              </span>
+                            ))
+                          : (() => {
+                              const myEval = evaluations.find((ev) => ev.director_id === currentUserId);
+                              return myEval ? (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-muted border flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3 text-green-600" />
+                                  Minha nota: {MEDAL_LABELS[myEval.medal]}
+                                </span>
+                              ) : null;
+                            })()
+                        }
                       </div>
                     )}
                   </div>
@@ -243,13 +256,37 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
 
                 {evaluations.length > 0 && (
                   <div className="pt-3 border-t space-y-2">
-                    <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Avaliações ({evaluations.length})</p>
-                    {evaluations.map((ev, i) => (
-                      <div key={i} className="flex items-center gap-2 text-sm">
-                        <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                        <span>{ev.director.role === "DIRETOR_CENTRAL" ? "Dir. Central" : ev.director.name}: <strong>{MEDAL_LABELS[ev.medal]}</strong></span>
-                      </div>
-                    ))}
+                    {canSeeAllEvaluations ? (
+                      <>
+                        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Avaliações ({evaluations.length})</p>
+                        {evaluations.map((ev, i) => (
+                          <div key={i} className="flex items-center gap-2 text-sm">
+                            <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                            <span>{ev.director.role === "DIRETOR_CENTRAL" ? "Dir. Central" : ev.director.name}: <strong>{MEDAL_LABELS[ev.medal]}</strong></span>
+                          </div>
+                        ))}
+                      </>
+                    ) : (() => {
+                        const myEval = evaluations.find((ev) => ev.director_id === currentUserId);
+                        return myEval ? (
+                          <>
+                            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Minha Avaliação</p>
+                            <div className="flex items-center gap-2 text-sm">
+                              <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                              <strong>{MEDAL_LABELS[myEval.medal]}</strong>
+                            </div>
+                            {myEval.justification && <p className="text-xs text-muted-foreground">{myEval.justification}</p>}
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {evaluations.length} {evaluations.length === 1 ? "avaliação" : "avaliações"} recebida{evaluations.length !== 1 ? "s" : ""} no total
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            {evaluations.length} {evaluations.length === 1 ? "avaliação" : "avaliações"} recebida{evaluations.length !== 1 ? "s" : ""} — aguardando sua avaliação
+                          </p>
+                        );
+                      })()
+                    }
                   </div>
                 )}
 

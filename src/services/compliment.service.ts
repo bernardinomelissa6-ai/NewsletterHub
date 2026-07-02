@@ -160,6 +160,7 @@ export async function getComplimentById(id: string) {
       manager: { name: managerMap.get(a.manager_id)?.name ?? "—" },
     })),
     evaluations: (rawEvals ?? []).map((e: any) => ({
+      director_id: e.director_id,
       medal: e.medal,
       justification: e.justification,
       comment: e.comment,

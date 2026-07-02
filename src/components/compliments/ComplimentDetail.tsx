@@ -1,12 +1,15 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Paperclip, User, Calendar, Tag, Award } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ArrowLeft, Edit, Paperclip, User, Calendar, Tag, Award, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import type { MedalType, ComplimentStatus } from "@/lib/supabase/types";
 
 const STATUS_LABELS: Record<ComplimentStatus, string> = {
@@ -49,7 +52,30 @@ interface Props {
 }
 
 export function ComplimentDetail({ compliment: c, userRole, userId }: Props) {
+  const router = useRouter();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   const canEdit = c.status === "DEVOLVIDO_PARA_AJUSTE" && (c.collaborator?.id === userId || userRole === "ADMIN");
+  const isAdmin = userRole === "ADMIN";
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/compliments/${c.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const json = await res.json();
+        toast.error(json.error ?? "Erro ao excluir");
+        return;
+      }
+      toast.success("Elogio excluído com sucesso");
+      router.push("/compliments");
+      router.refresh();
+    } finally {
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -57,11 +83,18 @@ export function ComplimentDetail({ compliment: c, userRole, userId }: Props) {
         <Button variant="ghost" size="sm" asChild>
           <Link href="/compliments"><ArrowLeft className="w-4 h-4" /> Voltar</Link>
         </Button>
-        {canEdit && (
-          <Button size="sm" asChild className="ml-auto">
-            <Link href={`/compliments/${c.id}/edit`}><Edit className="w-4 h-4" /> Editar</Link>
-          </Button>
-        )}
+        <div className="ml-auto flex items-center gap-2">
+          {canEdit && (
+            <Button size="sm" asChild>
+              <Link href={`/compliments/${c.id}/edit`}><Edit className="w-4 h-4" /> Editar</Link>
+            </Button>
+          )}
+          {isAdmin && (
+            <Button size="sm" variant="destructive" onClick={() => setConfirmDelete(true)}>
+              <Trash2 className="w-4 h-4" /> Excluir
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Main card */}
@@ -158,6 +191,26 @@ export function ComplimentDetail({ compliment: c, userRole, userId }: Props) {
           </CardContent>
         </Card>
       )}
+
+      {/* Confirm delete dialog */}
+      <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Excluir elogio</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Tem certeza que deseja excluir o elogio de <span className="font-semibold text-foreground">{c.insured}</span>? Esta ação não pode ser desfeita.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setConfirmDelete(false)} disabled={deleting}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? "Excluindo..." : "Excluir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

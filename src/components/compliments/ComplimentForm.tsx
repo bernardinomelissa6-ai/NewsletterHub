@@ -33,6 +33,8 @@ interface Props {
   currentUserName?: string;
   complimentId?: string;
   defaultValues?: Partial<CreateComplimentInput>;
+  /** Force Select even with 1 collaborator (for ADMIN/MANAGER roles) */
+  forceSelect?: boolean;
 }
 
 async function uploadDirect(file: File, folder: string): Promise<{ url: string; name: string; type: string }> {
@@ -57,18 +59,19 @@ async function uploadDirect(file: File, folder: string): Promise<{ url: string; 
   return { url: publicUrl, name: file.name, type: file.type };
 }
 
-export function ComplimentForm({ collaborators, branches, defaultCollaboratorName, defaultCollaboratorId, currentUserName, complimentId, defaultValues }: Props) {
+export function ComplimentForm({ collaborators, branches, defaultCollaboratorName, defaultCollaboratorId, currentUserName, complimentId, defaultValues, forceSelect }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
 
-  const isMultiCollaborator = collaborators.length > 1;
+  // ADMIN/MANAGER always use Select (forceSelect); COLLABORATOR uses Input when alone
+  const isMultiCollaborator = forceSelect || collaborators.length > 1;
 
-  // For single-collaborator (COLLABORATOR role): pre-fill with their name
+  // For COLLABORATOR Input: pre-fill with their own name
   const singleDefaultValue = defaultCollaboratorName ?? collaborators[0]?.name ?? currentUserName ?? "";
-  // For multi-collaborator Select: use ID if explicitly provided, otherwise empty (show placeholder)
+  // For Select: start empty (placeholder) so user must pick explicitly
   const multiDefaultValue = defaultCollaboratorId ?? "";
 
   const { register, handleSubmit, control, setValue, formState: { errors } } = useForm<CreateComplimentInput>({

@@ -32,6 +32,7 @@ export default async function NewComplimentPage() {
   }
 
   const branches = await getBranches(true);
+  const forceSelect = role === "ADMIN" || role === "MANAGER" || role === "DIRETOR_CENTRAL";
 
   return (
     <div className="max-w-2xl">
@@ -41,7 +42,13 @@ export default async function NewComplimentPage() {
           Registre um elogio recebido de cliente, segurado, parceiro ou corretor
         </p>
       </div>
-      <ComplimentForm collaborators={collaborators} branches={branches} currentUserName={userName ?? ""} />
+      <ComplimentForm
+        collaborators={collaborators}
+        branches={branches}
+        currentUserName={userName ?? ""}
+        defaultCollaboratorName={!forceSelect ? (collaborators[0]?.name ?? userName ?? "") : undefined}
+        forceSelect={forceSelect}
+      />
     </div>
   );
 }

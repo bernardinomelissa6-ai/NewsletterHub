@@ -135,7 +135,7 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
                         variant="outline"
                         className={evalCount >= 2 ? "text-green-700 border-green-300 bg-green-50" : "text-orange-700 border-orange-300 bg-orange-50"}
                       >
-                        {evalCount} avaliação{evalCount !== 1 ? "ões" : ""}
+                        {evalCount} {evalCount === 1 ? "avaliação" : "avaliações"}
                       </Badge>
                     </div>
                     <h3 className="font-semibold text-base">{c.insured}</h3>

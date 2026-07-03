@@ -182,7 +182,7 @@ export function ComplimentForm({ collaborators, branches, defaultCollaboratorNam
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o colaborador" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-60 overflow-y-auto">
                       {collaborators.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.name} {c.area ? `(${c.area.name})` : ""}

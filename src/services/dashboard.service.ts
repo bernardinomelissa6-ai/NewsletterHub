@@ -54,24 +54,27 @@ export async function getManagerDashboard(managerId: string) {
 }
 
 export async function getDirectorDashboard(directorId: string) {
-  const { data: areas } = await supabaseAdmin.from("areas").select("id").eq("director_id", directorId);
-  const areaIds = (areas ?? []).map((a: any) => a.id);
-  if (areaIds.length === 0) return { pendingEvaluation: 0, totalCompliments: 0, evaluated: 0, approved: 0 };
+  // Busca todos os elogios do sistema (um diretor pode avaliar qualquer elogio pendente)
+  const [complimentsRes, myEvalsRes] = await Promise.all([
+    supabaseAdmin.from("compliments").select("id, status"),
+    supabaseAdmin.from("compliment_evaluations").select("compliment_id").eq("director_id", directorId),
+  ]);
 
-  const { data: colls } = await supabaseAdmin.from("users").select("id").in("area_id", areaIds);
-  const collaboratorIds = (colls ?? []).map((u: any) => u.id);
-  if (collaboratorIds.length === 0) return { pendingEvaluation: 0, totalCompliments: 0, evaluated: 0, approved: 0 };
+  const all = complimentsRes.data ?? [];
+  const myEvaluatedIds = new Set((myEvalsRes.data ?? []).map((e: any) => e.compliment_id));
 
-  const { data: compliments } = await supabaseAdmin.from("compliments").select("status").in("collaborator_id", collaboratorIds);
-  const all = compliments ?? [];
   const statusMap: Record<string, number> = {};
   for (const c of all) statusMap[c.status] = (statusMap[c.status] ?? 0) + 1;
 
+  // Pendentes de avaliação que este diretor ainda não avaliou
+  const pendingAll = all.filter((c) => c.status === "PENDENTE_AVALIACAO");
+  const pendingEvaluation = pendingAll.filter((c) => !myEvaluatedIds.has(c.id)).length;
+
   return {
-    pendingEvaluation: statusMap["PENDENTE_AVALIACAO"] ?? 0,
+    pendingEvaluation,
     totalCompliments: all.length,
     evaluated: statusMap["AVALIADO"] ?? 0,
-    approved: statusMap["PENDENTE_AVALIACAO"] ?? 0,
+    approved: (statusMap["PENDENTE_AVALIACAO"] ?? 0) + (statusMap["AVALIADO"] ?? 0),
   };
 }
 

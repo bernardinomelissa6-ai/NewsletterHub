@@ -1,5 +1,6 @@
 import { requireRole } from "@/lib/auth/session";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getAreas } from "@/services/area.service";
 import { AreaTable } from "@/components/areas/AreaTable";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -12,23 +13,12 @@ export default async function AreasPage() {
   const session = await requireRole("ADMIN", "DIRETOR_CENTRAL");
   const isAdmin = session.user.role === "ADMIN";
 
-  const { data: areasRaw } = await supabaseAdmin
-    .from("areas")
-    .select("*, manager:users!areas_manager_id_fkey(id, name), collaborators:users(id)")
-    .order("name");
+  const [areas, managersResult] = await Promise.all([
+    getAreas(),
+    supabaseAdmin.from("users").select("id, name").in("role", ["MANAGER", "ADMIN"]).eq("is_active", true).order("name"),
+  ]);
 
-  const areas = (areasRaw ?? []).map((a) => ({
-    ...a,
-    _count: { collaborators: Array.isArray(a.collaborators) ? a.collaborators.length : 0 },
-    collaborators: undefined,
-  }));
-
-  const { data: managers } = await supabaseAdmin
-    .from("users")
-    .select("id, name")
-    .in("role", ["MANAGER", "ADMIN"])
-    .eq("is_active", true)
-    .order("name");
+  const managers = managersResult.data ?? [];
 
   return (
     <div className="space-y-6">

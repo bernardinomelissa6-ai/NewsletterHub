@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Shield, User, Calendar, Loader2, CheckCircle2, Paperclip, Building2, ArrowLeft } from "lucide-react";
+import { Shield, User, Calendar, Loader2, CheckCircle2, Paperclip, Building2, ArrowLeft, Pencil } from "lucide-react";
 import { MEDAL_LABELS } from "@/lib/utils/ranking";
 import { MedalIcon } from "@/components/ui/MedalIcon";
 import type { MedalType } from "@/lib/supabase/types";
@@ -46,7 +46,7 @@ const MEDAL_SCORE_COLORS: Record<MedalType, string> = {
   BRONZE: "text-orange-700 bg-orange-100 border-orange-300",
 };
 
-type Mode = "detail" | "evaluate";
+type Mode = "detail" | "evaluate" | "reevaluate";
 
 interface Props {
   compliments: Compliment[];
@@ -62,6 +62,7 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
   const [mode, setMode] = useState<Mode>("detail");
   const [medal, setMedal] = useState<MedalType | "">("");
   const [comment, setComment] = useState("");
+  const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
 
   function openDetail(c: Compliment) {
@@ -69,6 +70,7 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
     setMode("detail");
     setMedal("");
     setComment("");
+    setReason("");
   }
 
   function closeDialog() {
@@ -79,6 +81,12 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
     setMode("evaluate");
     setMedal("");
     setComment("");
+  }
+
+  function startReevaluation(currentMedal: MedalType) {
+    setMode("reevaluate");
+    setMedal(currentMedal);
+    setReason("");
   }
 
   async function handleEvaluate() {
@@ -94,6 +102,27 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? "Erro ao avaliar"); return; }
       toast.success("Avaliação registrada com sucesso!");
+      closeDialog();
+      router.refresh();
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleReevaluate() {
+    if (!selected || !medal) { toast.error("Selecione uma medalha"); return; }
+    if (!reason || reason.length < 10) { toast.error("Informe o motivo da alteração (mínimo 10 caracteres)"); return; }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/compliments/${selected.id}/evaluate`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ medal, reason }),
+      });
+      const json = await res.json();
+      if (!res.ok) { toast.error(json.error ?? "Erro ao editar avaliação"); return; }
+      toast.success("Avaliação atualizada com sucesso!");
       closeDialog();
       router.refresh();
     } finally {
@@ -184,7 +213,7 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {mode === "evaluate" && (
+              {(mode === "evaluate" || mode === "reevaluate") && (
                 <button
                   onClick={() => setMode("detail")}
                   className="p-1 rounded hover:bg-muted transition-colors"
@@ -192,7 +221,7 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
                   <ArrowLeft className="w-4 h-4" />
                 </button>
               )}
-              {mode === "detail" ? "Detalhes do Elogio" : "Avaliar Elogio"}
+              {mode === "detail" ? "Detalhes do Elogio" : mode === "reevaluate" ? "Editar Avaliação" : "Avaliar Elogio"}
             </DialogTitle>
           </DialogHeader>
 
@@ -303,18 +332,32 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
                   </div>
                 )}
 
-                {alreadyEvaluated && (
-                  <div className="pt-3 border-t">
-                    <p className="text-sm text-green-700 flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4" /> Você já avaliou este elogio.
-                    </p>
-                  </div>
-                )}
+                {alreadyEvaluated && (() => {
+                  const myEval = evaluations.find((e) => e.director_id === currentUserId);
+                  const canReevaluate = ["DIRECTOR", "DIRETOR_CENTRAL", "ADMIN"].includes(userRole);
+                  return (
+                    <div className="pt-3 border-t space-y-2">
+                      <p className="text-sm text-green-700 flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4" /> Você já avaliou este elogio.
+                      </p>
+                      {canReevaluate && myEval && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full gap-2"
+                          onClick={() => startReevaluation(myEval.medal)}
+                        >
+                          <Pencil className="w-4 h-4" /> Editar minha avaliação
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             );
           })()}
 
-          {selected && mode === "evaluate" && (
+          {selected && (mode === "evaluate" || mode === "reevaluate") && (
             <>
               <div className="space-y-5">
                 <div className="bg-muted rounded-lg p-3 text-sm">
@@ -341,22 +384,42 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Comentário (opcional)</Label>
-                  <Textarea
-                    placeholder="Adicione um comentário para o colaborador..."
-                    value={comment}
-                    onChange={(e) => setComment(e.target.value)}
-                    rows={2}
-                  />
-                </div>
+                {mode === "evaluate" && (
+                  <div className="space-y-2">
+                    <Label>Comentário (opcional)</Label>
+                    <Textarea
+                      placeholder="Adicione um comentário para o colaborador..."
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      rows={2}
+                    />
+                  </div>
+                )}
+
+                {mode === "reevaluate" && (
+                  <div className="space-y-2">
+                    <Label>Motivo da alteração *</Label>
+                    <Textarea
+                      placeholder="Explique o motivo da alteração da avaliação (mínimo 10 caracteres)..."
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+                )}
               </div>
 
               <DialogFooter>
                 <Button variant="outline" onClick={() => setMode("detail")}>Voltar</Button>
-                <Button onClick={handleEvaluate} disabled={loading || !medal}>
-                  {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Avaliando...</> : "Confirmar Avaliação"}
-                </Button>
+                {mode === "evaluate" ? (
+                  <Button onClick={handleEvaluate} disabled={loading || !medal}>
+                    {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Avaliando...</> : "Confirmar Avaliação"}
+                  </Button>
+                ) : (
+                  <Button onClick={handleReevaluate} disabled={loading || !medal}>
+                    {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Salvando...</> : "Salvar Alteração"}
+                  </Button>
+                )}
               </DialogFooter>
             </>
           )}

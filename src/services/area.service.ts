@@ -50,30 +50,66 @@ export async function deleteArea(id: string, adminId: string, adminName: string)
 }
 
 export async function getAreas(search?: string) {
-  let query = supabaseAdmin
-    .from("areas")
-    .select("*, manager:users!areas_manager_id_fkey(id, name), director:users!areas_director_id_fkey(id, name), collaborators:users(id)")
-    .order("name");
-
+  let query = supabaseAdmin.from("areas").select("id, name, manager_id, director_id, is_active, updated_at").order("name");
   if (search) query = query.ilike("name", `%${search}%`);
-
-  const { data, error } = await query;
+  const { data: areas, error } = await query;
   if (error) throw error;
+  if (!areas || areas.length === 0) return [];
 
-  return (data ?? []).map((a) => ({
+  const userIds = [...new Set([
+    ...areas.map((a: any) => a.manager_id),
+    ...areas.map((a: any) => a.director_id),
+  ].filter(Boolean))];
+
+  const { data: users } = userIds.length > 0
+    ? await supabaseAdmin.from("users").select("id, name").in("id", userIds)
+    : { data: [] };
+  const userMap = new Map((users ?? []).map((u: any) => [u.id, u]));
+
+  const { data: collaboratorCounts } = await supabaseAdmin
+    .from("users")
+    .select("area_id")
+    .in("area_id", areas.map((a: any) => a.id))
+    .eq("role", "COLLABORATOR")
+    .eq("is_active", true);
+
+  const countMap = new Map<string, number>();
+  for (const u of collaboratorCounts ?? []) {
+    countMap.set(u.area_id, (countMap.get(u.area_id) ?? 0) + 1);
+  }
+
+  return areas.map((a: any) => ({
     ...a,
-    _count: { collaborators: Array.isArray(a.collaborators) ? a.collaborators.length : 0 },
-    collaborators: undefined,
+    manager: a.manager_id ? userMap.get(a.manager_id) ?? null : null,
+    director: a.director_id ? userMap.get(a.director_id) ?? null : null,
+    _count: { collaborators: countMap.get(a.id) ?? 0 },
   }));
 }
 
 export async function getAreaById(id: string) {
-  const { data, error } = await supabaseAdmin
+  const { data: area, error } = await supabaseAdmin
     .from("areas")
-    .select("*, manager:users!areas_manager_id_fkey(id, name, email), director:users!areas_director_id_fkey(id, name, email), collaborators:users(id, name, email, role, is_active)")
+    .select("id, name, manager_id, director_id, is_active, updated_at")
     .eq("id", id)
     .single();
 
-  if (error) return null;
-  return data;
+  if (error || !area) return null;
+
+  const userIds = [area.manager_id, area.director_id].filter(Boolean) as string[];
+  const { data: users } = userIds.length > 0
+    ? await supabaseAdmin.from("users").select("id, name, email").in("id", userIds)
+    : { data: [] };
+  const userMap = new Map((users ?? []).map((u: any) => [u.id, u]));
+
+  const { data: collaborators } = await supabaseAdmin
+    .from("users")
+    .select("id, name, email, role, is_active")
+    .eq("area_id", id);
+
+  return {
+    ...area,
+    manager: area.manager_id ? userMap.get(area.manager_id) ?? null : null,
+    director: area.director_id ? userMap.get(area.director_id) ?? null : null,
+    collaborators: collaborators ?? [],
+  };
 }

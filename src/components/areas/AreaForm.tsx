@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -31,9 +31,9 @@ export function AreaForm({ managers, directors, areaId, defaultValues }: Props) 
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<AreaFormData>({
+  const { register, handleSubmit, control, formState: { errors } } = useForm<AreaFormData>({
     resolver: zodResolver(areaFormSchema),
-    defaultValues,
+    defaultValues: defaultValues ?? { name: "", managerId: "", directorId: "" },
   });
 
   async function onSubmit(data: AreaFormData) {
@@ -45,7 +45,7 @@ export function AreaForm({ managers, directors, areaId, defaultValues }: Props) 
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...data,
+          name: data.name,
           managerId: data.managerId || undefined,
           directorId: data.directorId || undefined,
         }),
@@ -55,6 +55,8 @@ export function AreaForm({ managers, directors, areaId, defaultValues }: Props) 
       toast.success(areaId ? "Área atualizada!" : "Área criada!");
       router.push("/areas");
       router.refresh();
+    } catch (err: any) {
+      toast.error(err.message ?? "Erro ao salvar");
     } finally {
       setLoading(false);
     }
@@ -69,24 +71,41 @@ export function AreaForm({ managers, directors, areaId, defaultValues }: Props) 
             <Input id="name" placeholder="Ex: Automóvel, Vida, Comercial..." {...register("name")} />
             {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
           </div>
+
           <div className="space-y-2">
             <Label>Gestor Responsável</Label>
-            <Select onValueChange={(v) => setValue("managerId", v)} defaultValue={defaultValues?.managerId}>
-              <SelectTrigger><SelectValue placeholder="Selecione um gestor (opcional)" /></SelectTrigger>
-              <SelectContent>
-                {managers.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <Controller
+              name="managerId"
+              control={control}
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                  <SelectTrigger><SelectValue placeholder="Selecione um gestor (opcional)" /></SelectTrigger>
+                  <SelectContent>
+                    {managers.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.managerId && <p className="text-xs text-destructive">{errors.managerId.message}</p>}
           </div>
+
           <div className="space-y-2">
             <Label>Diretor Responsável</Label>
-            <Select onValueChange={(v) => setValue("directorId", v)} defaultValue={defaultValues?.directorId}>
-              <SelectTrigger><SelectValue placeholder="Selecione um diretor (opcional)" /></SelectTrigger>
-              <SelectContent>
-                {directors.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <Controller
+              name="directorId"
+              control={control}
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                  <SelectTrigger><SelectValue placeholder="Selecione um diretor (opcional)" /></SelectTrigger>
+                  <SelectContent>
+                    {directors.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.directorId && <p className="text-xs text-destructive">{errors.directorId.message}</p>}
           </div>
+
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="outline" onClick={() => router.back()} className="flex-1">Cancelar</Button>
             <Button type="submit" className="flex-1" disabled={loading}>

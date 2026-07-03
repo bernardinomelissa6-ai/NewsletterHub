@@ -65,6 +65,14 @@ export function ComplimentForm({ collaborators, branches, defaultCollaboratorNam
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+    const dropped = e.dataTransfer.files?.[0];
+    if (dropped) { setFile(dropped); setFileError(null); }
+  }
 
   // ADMIN/MANAGER always use Select (forceSelect); COLLABORATOR uses Input when alone
   const isMultiCollaborator = forceSelect || collaborators.length > 1;
@@ -214,7 +222,14 @@ export function ComplimentForm({ collaborators, branches, defaultCollaboratorNam
 
           <div className="space-y-2">
             <Label>Anexo *</Label>
-            <div className={`border-2 border-dashed rounded-lg p-4 text-center ${fileError ? "border-destructive" : "border-border"}`}>
+            <div
+              className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                fileError ? "border-destructive" : isDragging ? "border-primary bg-primary/5" : "border-border"
+              }`}
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+            >
               {file ? (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm">
@@ -227,9 +242,12 @@ export function ComplimentForm({ collaborators, branches, defaultCollaboratorNam
                   </Button>
                 </div>
               ) : (
-                <label className="cursor-pointer">
-                  <Paperclip className="w-6 h-6 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">Clique para anexar o e-mail ou PDF do elogio</p>
+                <label className="cursor-pointer block">
+                  <Upload className={`w-8 h-8 mx-auto mb-2 ${isDragging ? "text-primary" : "text-muted-foreground"}`} />
+                  <p className="text-sm text-muted-foreground">
+                    Arraste o arquivo aqui ou{" "}
+                    <span className="text-primary underline">clique para selecionar</span>
+                  </p>
                   <p className="text-xs text-muted-foreground mt-1">PDF, EML, MSG • Máx. 1GB</p>
                   <input
                     type="file"

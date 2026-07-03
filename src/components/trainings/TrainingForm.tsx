@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { createTrainingSchema, type CreateTrainingInput } from "@/lib/validations/training.schema";
-import { Loader2, Paperclip, X } from "lucide-react";
+import { Loader2, Paperclip, Upload, X } from "lucide-react";
 
 const BRANCHES = ["Automóvel", "Vida", "Saúde", "Residencial", "Patrimonial", "Engenharia", "Transportes", "Responsabilidade Civil", "Outros"];
 const TYPES = [
@@ -36,6 +36,14 @@ export function TrainingForm({ collaborators, defaultCollaboratorName, currentUs
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+    const dropped = e.dataTransfer.files?.[0];
+    if (dropped) setFile(dropped);
+  }
 
   const initialCollaboratorName = defaultCollaboratorName ?? collaborators[0]?.name ?? currentUserName ?? "";
 
@@ -135,7 +143,14 @@ export function TrainingForm({ collaborators, defaultCollaboratorName, currentUs
 
           <div className="space-y-2">
             <Label>Certificado / Arquivo (opcional)</Label>
-            <div className="border-2 border-dashed border-border rounded-lg p-4 text-center">
+            <div
+              className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                isDragging ? "border-primary bg-primary/5" : "border-border"
+              }`}
+              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+            >
               {file ? (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm">
@@ -148,9 +163,12 @@ export function TrainingForm({ collaborators, defaultCollaboratorName, currentUs
                   </Button>
                 </div>
               ) : (
-                <label className="cursor-pointer">
-                  <Paperclip className="w-6 h-6 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">Clique para anexar um arquivo</p>
+                <label className="cursor-pointer block">
+                  <Upload className={`w-8 h-8 mx-auto mb-2 ${isDragging ? "text-primary" : "text-muted-foreground"}`} />
+                  <p className="text-sm text-muted-foreground">
+                    Arraste o arquivo aqui ou{" "}
+                    <span className="text-primary underline">clique para selecionar</span>
+                  </p>
                   <p className="text-xs text-muted-foreground mt-1">PDF, PPT, PPTX • Máx. 10MB</p>
                   <input
                     type="file"

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -19,6 +19,10 @@ const userFormSchema = z.object({
   role: z.enum(["COLLABORATOR", "MANAGER", "DIRECTOR", "DIRETOR_CENTRAL", "ADMIN"]),
   areaId: z.string().uuid("Área inválida").optional().or(z.literal("")),
   password: z.string().min(8, "Senha deve ter ao menos 8 caracteres").optional().or(z.literal("")),
+}).superRefine((data, ctx) => {
+  if (data.role === "COLLABORATOR" && !data.areaId) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Área é obrigatória para Colaboradores", path: ["areaId"] });
+  }
 });
 
 type UserFormData = z.infer<typeof userFormSchema>;
@@ -41,7 +45,7 @@ export function UserForm({ areas, userId, defaultValues }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<UserFormData>({
+  const { register, handleSubmit, control, watch, formState: { errors } } = useForm<UserFormData>({
     resolver: zodResolver(userFormSchema),
     defaultValues,
   });
@@ -89,24 +93,37 @@ export function UserForm({ areas, userId, defaultValues }: Props) {
 
           <div className="space-y-2">
             <Label>Perfil *</Label>
-            <Select onValueChange={(v) => setValue("role", v as UserFormData["role"])} defaultValue={defaultValues?.role}>
-              <SelectTrigger><SelectValue placeholder="Selecione o perfil" /></SelectTrigger>
-              <SelectContent>
-                {ROLES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <Controller
+              name="role"
+              control={control}
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o perfil" /></SelectTrigger>
+                  <SelectContent>
+                    {ROLES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+            />
             {errors.role && <p className="text-xs text-destructive">{errors.role.message}</p>}
           </div>
 
           {(role === "COLLABORATOR" || role === "MANAGER") && (
             <div className="space-y-2">
-              <Label>Área {role === "COLLABORATOR" ? "*" : ""}</Label>
-              <Select onValueChange={(v) => setValue("areaId", v)} defaultValue={defaultValues?.areaId}>
-                <SelectTrigger><SelectValue placeholder="Selecione a área" /></SelectTrigger>
-                <SelectContent>
-                  {areas.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <Label>Área {role === "COLLABORATOR" ? "*" : "(opcional)"}</Label>
+              <Controller
+                name="areaId"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                    <SelectTrigger><SelectValue placeholder="Selecione a área" /></SelectTrigger>
+                    <SelectContent>
+                      {areas.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.areaId && <p className="text-xs text-destructive">{errors.areaId.message}</p>}
             </div>
           )}
 

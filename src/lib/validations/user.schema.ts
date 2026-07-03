@@ -7,6 +7,10 @@ export const createUserSchema = z.object({
   password: z.string().min(8).regex(/[A-Z]/).regex(/[0-9]/),
   role: z.nativeEnum(Role),
   areaId: z.string().uuid().optional().nullable(),
+}).superRefine((data, ctx) => {
+  if (data.role === "COLLABORATOR" && !data.areaId) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Área é obrigatória para Colaboradores", path: ["areaId"] });
+  }
 });
 
 export const updateUserSchema = z.object({

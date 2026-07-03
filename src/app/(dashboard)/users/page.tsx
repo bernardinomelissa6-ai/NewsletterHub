@@ -12,8 +12,16 @@ export default async function UsersPage() {
   const session = await requireRole("ADMIN", "DIRETOR_CENTRAL");
   const isAdmin = session.user.role === "ADMIN";
 
-  const { data: users } = await supabaseAdmin.from("users").select("*, area:areas(name)").order("name");
-  const { data: areas } = await supabaseAdmin.from("areas").select("id, name").order("name");
+  const [{ data: usersRaw }, { data: areas }] = await Promise.all([
+    supabaseAdmin.from("users").select("id, name, email, role, is_active, area_id, created_at").order("name"),
+    supabaseAdmin.from("areas").select("id, name").order("name"),
+  ]);
+
+  const areaMap = new Map((areas ?? []).map((a) => [a.id, a.name]));
+  const users = (usersRaw ?? []).map((u) => ({
+    ...u,
+    area: u.area_id ? { name: areaMap.get(u.area_id) ?? "" } : null,
+  }));
 
   return (
     <div className="space-y-6">

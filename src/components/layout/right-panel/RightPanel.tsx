@@ -88,7 +88,7 @@ export async function RightPanel() {
                       <p className="text-xs font-medium truncate">{c.collaborator?.name ?? ""}</p>
                       <p className="text-[10px] text-muted-foreground truncate">{c.insured}</p>
                       <p className="text-[10px] text-muted-foreground">
-                        {formatDistanceToNow(new Date(c.updated_at), { addSuffix: true, locale: ptBR })}
+                        {formatDistanceToNow(new Date(c.updated_at.endsWith("Z") || c.updated_at.includes("+") ? c.updated_at : c.updated_at + "Z"), { addSuffix: true, locale: ptBR })}
                       </p>
                     </div>
                   </Link>

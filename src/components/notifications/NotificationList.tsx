@@ -103,7 +103,7 @@ export function NotificationList({ notifications }: { notifications: Notificatio
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">{n.message}</p>
                     <p className="text-xs text-muted-foreground mt-1.5">
-                      {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: ptBR })}
+                      {formatDistanceToNow(new Date(n.created_at.endsWith("Z") || n.created_at.includes("+") ? n.created_at : n.created_at + "Z"), { addSuffix: true, locale: ptBR })}
                     </p>
                   </div>
                 </div>

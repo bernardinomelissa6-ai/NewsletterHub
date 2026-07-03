@@ -13,7 +13,7 @@ export default async function NewComplimentPage() {
   let collaborators: { id: string; name: string; area: { name: string } | null }[] = [];
 
   if (role === "ADMIN" || role === "DIRETOR_CENTRAL") {
-    const { data: users } = await supabaseAdmin.from("users").select("id, name, area_id").eq("is_active", true).eq("role", "COLLABORATOR").order("name");
+    const { data: users } = await supabaseAdmin.from("users").select("id, name, area_id").eq("is_active", true).in("role", ["COLLABORATOR", "MANAGER", "DIRECTOR"]).order("name");
     const areaIds = [...new Set((users ?? []).map((u) => u.area_id).filter(Boolean))];
     const { data: areas } = areaIds.length > 0 ? await supabaseAdmin.from("areas").select("id, name").in("id", areaIds) : { data: [] };
     const areaMap = new Map((areas ?? []).map((a) => [a.id, a.name]));
@@ -23,7 +23,7 @@ export default async function NewComplimentPage() {
     const areaIds = (managerAreas ?? []).map((a) => a.id);
     const areaMap = new Map((managerAreas ?? []).map((a) => [a.id, a.name]));
     const { data: users } = areaIds.length > 0
-      ? await supabaseAdmin.from("users").select("id, name, area_id").eq("is_active", true).eq("role", "COLLABORATOR").in("area_id", areaIds).order("name")
+      ? await supabaseAdmin.from("users").select("id, name, area_id").eq("is_active", true).in("role", ["COLLABORATOR", "MANAGER"]).in("area_id", areaIds).order("name")
       : { data: [] };
     collaborators = (users ?? []).map((u) => ({ id: u.id, name: u.name, area: u.area_id ? { name: areaMap.get(u.area_id) ?? "" } : null }));
   } else {

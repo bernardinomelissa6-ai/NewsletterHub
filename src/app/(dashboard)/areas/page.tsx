@@ -13,35 +13,15 @@ export default async function AreasPage() {
   const session = await requireRole("ADMIN", "DIRETOR_CENTRAL");
   const isAdmin = session.user.role === "ADMIN";
 
-  // Direct query — bypasses service layer to isolate issues
-  const { data: areasRaw, error: areasError } = await supabaseAdmin
-    .from("areas")
-    .select("id, name, manager_id, director_id, is_active")
-    .order("name");
-
-  if (areasError) {
-    console.error("[AreasPage] Erro ao buscar áreas:", areasError);
-  }
-
-  const userIds = [...new Set([
-    ...(areasRaw ?? []).map((a) => a.manager_id),
-  ].filter(Boolean))];
-
-  const [usersResult, managersResult] = await Promise.all([
-    userIds.length > 0
-      ? supabaseAdmin.from("users").select("id, name").in("id", userIds)
-      : Promise.resolve({ data: [] }),
-    supabaseAdmin.from("users").select("id, name").in("role", ["MANAGER", "ADMIN"]).eq("is_active", true).order("name"),
+  const [areas, managersResult] = await Promise.all([
+    getAreas(),
+    supabaseAdmin
+      .from("users")
+      .select("id, name")
+      .in("role", ["MANAGER", "ADMIN"])
+      .eq("is_active", true)
+      .order("name"),
   ]);
-
-  const userMap = new Map((usersResult.data ?? []).map((u: any) => [u.id, u]));
-
-  const areas = (areasRaw ?? []).map((a) => ({
-    ...a,
-    manager: a.manager_id ? userMap.get(a.manager_id) ?? null : null,
-    director: null,
-    _count: { collaborators: 0 },
-  }));
 
   const managers = managersResult.data ?? [];
 
@@ -58,7 +38,7 @@ export default async function AreasPage() {
           </Button>
         )}
       </div>
-      <AreaTable areas={areas as any} managers={managers ?? []} />
+      <AreaTable areas={areas as any} managers={managers} />
     </div>
   );
 }

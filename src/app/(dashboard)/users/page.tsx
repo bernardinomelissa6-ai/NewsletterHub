@@ -20,6 +20,7 @@ export default async function UsersPage() {
   const areaMap = new Map((areas ?? []).map((a) => [a.id, a.name]));
   const users = (usersRaw ?? []).map((u) => ({
     ...u,
+    isActive: u.is_active,
     area: u.area_id ? { name: areaMap.get(u.area_id) ?? "" } : null,
   }));
 

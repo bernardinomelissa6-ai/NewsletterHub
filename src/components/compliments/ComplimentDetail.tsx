@@ -8,7 +8,7 @@ import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Edit, Paperclip, User, Calendar, Tag, Award, Trash2 } from "lucide-react";
+import { ArrowLeft, Edit, Paperclip, User, Calendar, Tag, Award, Trash2, FileText, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import type { MedalType, ComplimentStatus } from "@/lib/supabase/types";
 
@@ -31,6 +31,13 @@ const STATUS_CLASSES: Record<ComplimentStatus, string> = {
 const MEDAL_LABELS: Record<MedalType, string> = { SPECIAL: "Especial", GOLD: "Ouro", SILVER: "Prata", BRONZE: "Bronze" };
 const MEDAL_EMOJI: Record<MedalType, string> = { SPECIAL: "🏆", GOLD: "🥇", SILVER: "🥈", BRONZE: "🥉" };
 
+function getAttachmentKind(url: string, type?: string | null, name?: string | null): "pdf" | "image" | "other" {
+  const ext = (name ?? url).split("?")[0].split(".").pop()?.toLowerCase() ?? "";
+  if (type === "application/pdf" || ext === "pdf") return "pdf";
+  if ((type ?? "").startsWith("image/") || ["png", "jpg", "jpeg", "gif", "webp"].includes(ext)) return "image";
+  return "other";
+}
+
 interface Props {
   compliment: {
     id: string;
@@ -41,6 +48,8 @@ interface Props {
     claimHistory: string;
     status: ComplimentStatus;
     attachmentUrl: string | null;
+    attachmentName?: string | null;
+    attachmentType?: string | null;
     quarter: number;
     year: number;
     createdAt: Date | string;
@@ -142,18 +151,58 @@ export function ComplimentDetail({ compliment: c, userRole, userId }: Props) {
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">{c.claimHistory}</p>
           </div>
 
-          {c.attachmentUrl && (
-            <div className="pt-2 border-t">
-              <a
-                href={c.attachmentUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
-              >
-                <Paperclip className="w-4 h-4" /> Ver Anexo
-              </a>
-            </div>
-          )}
+          {c.attachmentUrl && (() => {
+            const kind = getAttachmentKind(c.attachmentUrl, c.attachmentType, c.attachmentName);
+            return (
+              <div className="pt-2 border-t space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium flex items-center gap-2">
+                    <Paperclip className="w-4 h-4" /> Anexo
+                  </p>
+                  <a
+                    href={c.attachmentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" /> Abrir em nova aba
+                  </a>
+                </div>
+
+                {kind === "pdf" && (
+                  <iframe
+                    src={c.attachmentUrl}
+                    title="Pré-visualização do anexo"
+                    className="w-full h-[520px] rounded-lg border"
+                  />
+                )}
+
+                {kind === "image" && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={c.attachmentUrl}
+                    alt={c.attachmentName ?? "Anexo"}
+                    className="w-full max-h-[520px] object-contain rounded-lg border bg-muted/30"
+                  />
+                )}
+
+                {kind === "other" && (
+                  <a
+                    href={c.attachmentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 rounded-lg border p-4 bg-muted/30 hover:bg-muted/60 transition-colors"
+                  >
+                    <FileText className="w-8 h-8 text-muted-foreground shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{c.attachmentName ?? "Anexo"}</p>
+                      <p className="text-xs text-muted-foreground">Pré-visualização não disponível para este tipo de arquivo · clique para abrir</p>
+                    </div>
+                  </a>
+                )}
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
 

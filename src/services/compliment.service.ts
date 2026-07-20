@@ -151,6 +151,8 @@ export async function getComplimentById(id: string) {
     claimHistory: c.claim_history,
     status: c.status,
     attachmentUrl: c.attachment_url,
+    attachmentName: c.attachment_name,
+    attachmentType: c.attachment_type,
     quarter: c.quarter,
     year: c.year,
     createdAt: c.created_at,

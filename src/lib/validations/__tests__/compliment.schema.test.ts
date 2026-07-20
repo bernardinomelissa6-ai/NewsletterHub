@@ -6,6 +6,7 @@ describe("createComplimentSchema", () => {
     receivedAt: "2024-06-15",
     branch: "Automóvel",
     reason: "Atendimento excelente prestado ao cliente",
+    claimHistory: "Sinistro aberto em 10/01/2024 e encerrado em 20/01/2024",
     collaboratorId: "550e8400-e29b-41d4-a716-446655440000",
   };
 
@@ -20,6 +21,17 @@ describe("createComplimentSchema", () => {
 
   it("rejeita elogio com menos de 10 caracteres", () => {
     const result = createComplimentSchema.safeParse({ ...valid, reason: "Curto" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejeita histórico do sinistro com menos de 10 caracteres", () => {
+    const result = createComplimentSchema.safeParse({ ...valid, claimHistory: "Curto" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejeita histórico do sinistro ausente", () => {
+    const { claimHistory, ...withoutClaimHistory } = valid;
+    const result = createComplimentSchema.safeParse(withoutClaimHistory);
     expect(result.success).toBe(false);
   });
 

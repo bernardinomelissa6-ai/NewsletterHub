@@ -19,6 +19,7 @@ interface Compliment {
   received_at: string;
   branch: string;
   reason: string;
+  claim_history: string;
   attachment_url: string | null;
   quarter: number;
   year: number;
@@ -181,6 +182,12 @@ export function PendingApprovalList({ compliments }: { compliments: Compliment[]
               <div className="pt-3 border-t space-y-1">
                 <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Elogio</p>
                 <p className="text-sm whitespace-pre-wrap">{selected.reason}</p>
+              </div>
+
+              {/* Claim history */}
+              <div className="pt-3 border-t space-y-1">
+                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Histórico do Sinistro</p>
+                <p className="text-sm whitespace-pre-wrap">{selected.claim_history}</p>
               </div>
 
               {/* Attachment */}

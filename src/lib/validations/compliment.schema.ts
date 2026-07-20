@@ -6,6 +6,7 @@ export const createComplimentSchema = z.object({
   receivedAt: z.string().min(1, "Data de recebimento obrigatória"),
   branch: z.string().min(1, "Ramo obrigatório").max(200),
   reason: z.string().min(10, "Elogio deve ter ao menos 10 caracteres").max(5000),
+  claimHistory: z.string().min(10, "Histórico do sinistro deve ter ao menos 10 caracteres").max(5000),
   collaboratorId: z.string().min(2, "Nome do colaborador obrigatório"),
 });
 

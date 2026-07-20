@@ -141,6 +141,7 @@ model Compliment {
   receivedAt     DateTime         @map("received_at") @db.Date
   branch         String           @db.VarChar(200)
   reason         String           @db.Text
+  claimHistory   String           @map("claim_history") @db.Text
   collaboratorId String           @map("collaborator_id")
   submittedById  String           @map("submitted_by_id")
   status         ComplimentStatus @default(PENDENTE_APROVACAO)

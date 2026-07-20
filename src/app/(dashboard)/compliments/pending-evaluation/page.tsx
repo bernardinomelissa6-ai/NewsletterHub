@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Avaliação de Elogios" };
 async function getAdminPendingEvaluations() {
   const { data: rawCompliments } = await supabaseAdmin
     .from("compliments")
-    .select("id, insured, received_at, branch, reason, status, quarter, year, created_at, attachment_url, collaborator_id, submitted_by_id")
+    .select("id, insured, received_at, branch, reason, claim_history, status, quarter, year, created_at, attachment_url, collaborator_id, submitted_by_id")
     .eq("status", "PENDENTE_AVALIACAO")
     .order("created_at");
 

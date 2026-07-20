@@ -221,6 +221,17 @@ export function ComplimentForm({ collaborators, branches, defaultCollaboratorNam
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="claimHistory">Histórico do Sinistro *</Label>
+            <Textarea
+              id="claimHistory"
+              placeholder="Descreva o histórico do sinistro relacionado a este elogio..."
+              rows={5}
+              {...register("claimHistory")}
+            />
+            {errors.claimHistory && <p className="text-xs text-destructive">{errors.claimHistory.message}</p>}
+          </div>
+
+          <div className="space-y-2">
             <Label>Anexo *</Label>
             <div
               className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${

@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
       receivedAt: formData.get("receivedAt") as string,
       branch: formData.get("branch") as string,
       reason: formData.get("reason") as string,
+      claimHistory: formData.get("claimHistory") as string,
       collaboratorId: formData.get("collaboratorId") as string,
     };
 

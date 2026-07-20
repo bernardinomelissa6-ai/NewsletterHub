@@ -38,6 +38,7 @@ interface Props {
     receivedAt: Date | string;
     branch: string;
     reason: string;
+    claimHistory: string;
     status: ComplimentStatus;
     attachmentUrl: string | null;
     quarter: number;
@@ -134,6 +135,11 @@ export function ComplimentDetail({ compliment: c, userRole, userId }: Props) {
           <div className="pt-2 border-t">
             <p className="text-sm font-medium mb-2">Elogio</p>
             <p className="text-sm text-muted-foreground whitespace-pre-wrap">{c.reason}</p>
+          </div>
+
+          <div className="pt-2 border-t">
+            <p className="text-sm font-medium mb-2">Histórico do Sinistro</p>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{c.claimHistory}</p>
           </div>
 
           {c.attachmentUrl && (

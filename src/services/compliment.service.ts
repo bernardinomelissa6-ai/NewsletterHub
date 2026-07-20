@@ -31,7 +31,7 @@ const COMPLIMENT_LIST_SELECT = `
 `;
 
 const COMPLIMENT_SELECT = `
-  id, insured, received_at, branch, reason, status,
+  id, insured, received_at, branch, reason, claim_history, status,
   attachment_url, attachment_name, attachment_type,
   quarter, year, created_at, updated_at,
   collaborator:users!collaborator_id(
@@ -71,6 +71,7 @@ export async function createCompliment(
     received_at: receivedAt.toISOString(),
     branch: input.branch,
     reason: input.reason,
+    claim_history: input.claimHistory,
     collaborator_id: input.collaboratorId,
     submitted_by_id: submittedById,
     attachment_url: attachmentUrl ?? null,
@@ -97,7 +98,7 @@ export async function createCompliment(
 export async function getComplimentById(id: string) {
   const { data: c } = await supabaseAdmin
     .from("compliments")
-    .select("id, insured, received_at, branch, reason, status, attachment_url, attachment_name, attachment_type, quarter, year, created_at, updated_at, collaborator_id, submitted_by_id")
+    .select("id, insured, received_at, branch, reason, claim_history, status, attachment_url, attachment_name, attachment_type, quarter, year, created_at, updated_at, collaborator_id, submitted_by_id")
     .eq("id", id)
     .single();
   if (!c) return null;
@@ -147,6 +148,7 @@ export async function getComplimentById(id: string) {
     receivedAt: c.received_at,
     branch: c.branch,
     reason: c.reason,
+    claimHistory: c.claim_history,
     status: c.status,
     attachmentUrl: c.attachment_url,
     quarter: c.quarter,
@@ -312,7 +314,7 @@ const isCentral = (role: string) => (CENTRAL_ROLES as readonly string[]).include
 export async function getPendingEvaluationsForCentralDirector(_centralDirectorId: string) {
   const { data: rawCompliments } = await supabaseAdmin
     .from("compliments")
-    .select("id, insured, received_at, branch, reason, status, quarter, year, created_at, attachment_url, collaborator_id, submitted_by_id")
+    .select("id, insured, received_at, branch, reason, claim_history, status, quarter, year, created_at, attachment_url, collaborator_id, submitted_by_id")
     .eq("status", "PENDENTE_AVALIACAO")
     .order("created_at");
 
@@ -525,6 +527,7 @@ export async function updateCompliment(
   }
   if (data.branch) updateData.branch = data.branch;
   if (data.reason) updateData.reason = data.reason;
+  if (data.claimHistory) updateData.claim_history = data.claimHistory;
   if (data.collaboratorId) updateData.collaborator_id = data.collaboratorId;
   if (data.attachmentUrl !== undefined) updateData.attachment_url = data.attachmentUrl;
   if (data.attachmentName !== undefined) updateData.attachment_name = data.attachmentName;

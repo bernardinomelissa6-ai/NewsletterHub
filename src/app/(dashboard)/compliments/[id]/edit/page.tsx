@@ -42,6 +42,7 @@ export default async function EditComplimentPage({ params }: { params: Promise<{
           receivedAt: String(receivedAt).split("T")[0],
           branch: compliment.branch,
           reason: compliment.reason,
+          claimHistory: (compliment as any).claimHistory,
           collaboratorId: coll?.name,
         }}
       />

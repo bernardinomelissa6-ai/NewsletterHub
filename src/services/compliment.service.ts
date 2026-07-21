@@ -237,15 +237,24 @@ export async function getPendingApprovals(managerId: string) {
   return data ?? [];
 }
 
-export async function getPendingEvaluations(_directorId: string) {
-  // Todos os diretores veem todos os elogios pendentes de avaliação
+export async function getPendingEvaluations(directorId: string) {
+  // Diretores veem os elogios pendentes de avaliação, exceto os da própria área
   // O componente controla quais já foram avaliados por este diretor
+  const { data: ownAreas } = await supabaseAdmin.from("areas").select("id").eq("director_id", directorId);
+  const excludedAreaIds = new Set((ownAreas ?? []).map((a: any) => a.id));
+
   const { data } = await supabaseAdmin
     .from("compliments")
     .select(COMPLIMENT_SELECT)
     .eq("status", "PENDENTE_AVALIACAO")
     .order("created_at");
-  return data ?? [];
+
+  const all = data ?? [];
+  if (excludedAreaIds.size === 0) return all;
+  return all.filter((c: any) => {
+    const areaId = c.collaborator?.area_id;
+    return !areaId || !excludedAreaIds.has(areaId);
+  });
 }
 
 export async function approveCompliment(
@@ -313,14 +322,36 @@ export async function returnCompliment(
 const CENTRAL_ROLES = ["DIRETOR_CENTRAL", "ADMIN"] as const;
 const isCentral = (role: string) => (CENTRAL_ROLES as readonly string[]).includes(role);
 
-export async function getPendingEvaluationsForCentralDirector(_centralDirectorId: string) {
-  const { data: rawCompliments } = await supabaseAdmin
+export async function getPendingEvaluationsForCentralDirector(centralDirectorId: string) {
+  const { data: rawComplimentsAll } = await supabaseAdmin
     .from("compliments")
     .select("id, insured, received_at, branch, reason, claim_history, status, quarter, year, created_at, attachment_url, collaborator_id, submitted_by_id")
     .eq("status", "PENDENTE_AVALIACAO")
     .order("created_at");
 
-  if (!rawCompliments || rawCompliments.length === 0) return [];
+  if (!rawComplimentsAll || rawComplimentsAll.length === 0) return [];
+
+  const allUserIdsPreFilter = [...new Set([
+    ...rawComplimentsAll.map((c: any) => c.collaborator_id),
+    ...rawComplimentsAll.map((c: any) => c.submitted_by_id),
+  ].filter(Boolean))];
+
+  const [{ data: usersAreaRaw }, { data: ownAreas }] = await Promise.all([
+    allUserIdsPreFilter.length > 0 ? supabaseAdmin.from("users").select("id, area_id").in("id", allUserIdsPreFilter) : Promise.resolve({ data: [] }),
+    supabaseAdmin.from("areas").select("id").eq("director_id", centralDirectorId),
+  ]);
+
+  // Diretor Central não avalia elogios de colaboradores da própria área (se aplicável)
+  const excludedAreaIds = new Set((ownAreas ?? []).map((a: any) => a.id));
+  const userAreaIdMap = new Map((usersAreaRaw ?? []).map((u: any) => [u.id, u.area_id]));
+  const rawCompliments = excludedAreaIds.size === 0
+    ? rawComplimentsAll
+    : rawComplimentsAll.filter((c: any) => {
+        const areaId = userAreaIdMap.get(c.collaborator_id) ?? userAreaIdMap.get(c.submitted_by_id);
+        return !areaId || !excludedAreaIds.has(areaId);
+      });
+
+  if (rawCompliments.length === 0) return [];
 
   const complimentIds = rawCompliments.map((c) => c.id);
   const allUserIds = [...new Set([

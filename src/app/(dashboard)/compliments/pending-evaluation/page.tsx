@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Avaliação de Elogios" };
 
-async function getAdminPendingEvaluations() {
+async function getAdminPendingEvaluations(excludeDirectorId?: string) {
   const { data: rawCompliments } = await supabaseAdmin
     .from("compliments")
     .select("id, insured, received_at, branch, reason, claim_history, status, quarter, year, created_at, attachment_url, collaborator_id, submitted_by_id")
@@ -15,19 +15,35 @@ async function getAdminPendingEvaluations() {
 
   if (!rawCompliments || rawCompliments.length === 0) return [];
 
-  const complimentIds = rawCompliments.map((c) => c.id);
-
   const allUserIds = [...new Set([
     ...rawCompliments.map((c) => c.collaborator_id),
     ...rawCompliments.map((c) => c.submitted_by_id),
   ].filter(Boolean))];
 
+  const [{ data: usersRaw }, { data: ownAreas }] = await Promise.all([
+    allUserIds.length > 0 ? supabaseAdmin.from("users").select("id, name, area_id").in("id", allUserIds) : Promise.resolve({ data: [] }),
+    excludeDirectorId ? supabaseAdmin.from("areas").select("id").eq("director_id", excludeDirectorId) : Promise.resolve({ data: [] }),
+  ]);
+
+  // Diretores não avaliam elogios de colaboradores da própria área
+  const excludedAreaIds = new Set((ownAreas ?? []).map((a: any) => a.id));
+  const userAreaIdMap = new Map((usersRaw ?? []).map((u: any) => [u.id, u.area_id]));
+  const visibleCompliments = excludedAreaIds.size === 0
+    ? rawCompliments
+    : rawCompliments.filter((c) => {
+        const areaId = userAreaIdMap.get(c.collaborator_id) ?? userAreaIdMap.get(c.submitted_by_id);
+        return !areaId || !excludedAreaIds.has(areaId);
+      });
+
+  if (visibleCompliments.length === 0) return [];
+
+  const complimentIds = visibleCompliments.map((c) => c.id);
+
   // Audit fallback IDs (records with no user references)
-  const orphanIds = rawCompliments.filter((c) => !c.collaborator_id && !c.submitted_by_id).map((c) => c.id);
+  const orphanIds = visibleCompliments.filter((c) => !c.collaborator_id && !c.submitted_by_id).map((c) => c.id);
 
   // Run all independent queries in parallel
-  const [{ data: usersRaw }, { data: approvalsData }, { data: evaluationsData }, { data: auditData }] = await Promise.all([
-    allUserIds.length > 0 ? supabaseAdmin.from("users").select("id, name, area_id").in("id", allUserIds) : Promise.resolve({ data: [] }),
+  const [{ data: approvalsData }, { data: evaluationsData }, { data: auditData }] = await Promise.all([
     supabaseAdmin.from("compliment_approvals").select("compliment_id, action, observation, created_at, manager_id").in("compliment_id", complimentIds),
     supabaseAdmin.from("compliment_evaluations").select("compliment_id, medal, justification, director_id").in("compliment_id", complimentIds),
     orphanIds.length > 0 ? supabaseAdmin.from("audit_logs").select("entity_id, user_name").eq("action", "CREATE").eq("entity_type", "Compliment").in("entity_id", orphanIds) : Promise.resolve({ data: [] }),
@@ -54,7 +70,7 @@ async function getAdminPendingEvaluations() {
   const managerMap = new Map((managersData ?? []).map((u: any) => [u.id, u]));
   const directorMap = new Map((directorsData ?? []).map((u: any) => [u.id, u]));
 
-  return rawCompliments.map((c) => ({
+  return visibleCompliments.map((c) => ({
     ...c,
     collaborator:
       userMap.get(c.collaborator_id) ??
@@ -79,8 +95,11 @@ export default async function PendingEvaluationPage() {
   let compliments: any[];
   if (role === "DIRETOR_CENTRAL") {
     compliments = await getPendingEvaluationsForCentralDirector(userId);
+  } else if (role === "DIRECTOR") {
+    // Diretor não avalia elogios de colaboradores da própria área
+    compliments = await getAdminPendingEvaluations(userId);
   } else {
-    // ADMIN e DIRECTOR usam a mesma query manual (sem FK joins que podem falhar)
+    // ADMIN usa a mesma query manual (sem FK joins que podem falhar), sem restrição de área
     compliments = await getAdminPendingEvaluations();
   }
 

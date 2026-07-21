@@ -103,7 +103,7 @@ export function MedalImageSettings({ medalImages }: { medalImages: Record<MedalT
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-4">
-                <div className="shrink-0 flex items-center justify-center w-20 h-20 rounded-lg border bg-muted/30 overflow-hidden">
+                <div className="shrink-0 flex items-center justify-center w-20 h-20 overflow-hidden">
                   {url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={url} alt={MEDAL_LABELS[type]} className="max-w-full max-h-full object-contain" />

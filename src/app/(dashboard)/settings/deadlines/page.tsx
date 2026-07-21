@@ -1,14 +1,18 @@
 import { requireRole } from "@/lib/auth/session";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getDeadlineMap } from "@/services/deadline.service";
 import { DeadlineSettings } from "@/components/settings/DeadlineSettings";
+import { DeadlineType } from "@/lib/supabase/types";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Controle de Prazos" };
 
+const DEADLINE_ORDER: DeadlineType[] = [DeadlineType.REGISTRATION, DeadlineType.APPROVAL, DeadlineType.EVALUATION];
+
 export default async function DeadlinesPage() {
   await requireRole("ADMIN");
 
-  const { data: deadlines } = await supabaseAdmin.from("deadlines").select("*").order("type");
+  const deadlineMap = await getDeadlineMap();
+  const deadlines = DEADLINE_ORDER.map((type) => ({ type, days: deadlineMap[type] }));
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -18,7 +22,7 @@ export default async function DeadlinesPage() {
           Configure os prazos de cada etapa do fluxo de elogios
         </p>
       </div>
-      <DeadlineSettings deadlines={(deadlines ?? []) as any} />
+      <DeadlineSettings deadlines={deadlines} />
     </div>
   );
 }

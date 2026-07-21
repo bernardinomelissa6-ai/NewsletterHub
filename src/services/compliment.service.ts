@@ -362,7 +362,7 @@ export async function getPendingEvaluationsForCentralDirector(centralDirectorId:
   const [{ data: usersRaw }, { data: evaluationsData }, { data: approvalsData }] = await Promise.all([
     allUserIds.length > 0 ? supabaseAdmin.from("users").select("id, name, area_id").in("id", allUserIds) : Promise.resolve({ data: [] }),
     supabaseAdmin.from("compliment_evaluations").select("compliment_id, medal, justification, director_id").in("compliment_id", complimentIds),
-    supabaseAdmin.from("compliment_approvals").select("compliment_id, action, observation, manager_id").in("compliment_id", complimentIds),
+    supabaseAdmin.from("compliment_approvals").select("compliment_id, action, observation, created_at, manager_id").in("compliment_id", complimentIds),
   ]);
 
   const directorIds = [...new Set((evaluationsData ?? []).map((e: any) => e.director_id).filter(Boolean))];

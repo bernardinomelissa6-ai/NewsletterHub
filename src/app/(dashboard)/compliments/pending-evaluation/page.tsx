@@ -1,10 +1,21 @@
 import { requireRole } from "@/lib/auth/session";
 import { getPendingEvaluationsForCentralDirector } from "@/services/compliment.service";
+import { getDeadline } from "@/services/deadline.service";
+import { calculateDeadline } from "@/lib/utils/deadline";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { PendingEvaluationList } from "@/components/compliments/PendingEvaluationList";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Avaliação de Elogios" };
+
+// Anexa o prazo de avaliação a cada elogio, contado a partir da aprovação do gestor
+function attachDeadline(compliments: any[], days: number) {
+  return compliments.map((c) => {
+    const approvedAt = c.approvals?.find((a: any) => a.action === "APPROVED")?.created_at ?? c.created_at;
+    const info = calculateDeadline(new Date(approvedAt), days);
+    return { ...c, deadline: { ...info, deadlineDate: info.deadlineDate.toISOString() } };
+  });
+}
 
 async function getAdminPendingEvaluations(excludeDirectorId?: string) {
   const { data: rawCompliments } = await supabaseAdmin
@@ -92,6 +103,9 @@ export default async function PendingEvaluationPage() {
   const session = await requireRole("DIRECTOR", "DIRETOR_CENTRAL", "ADMIN");
   const { role, id: userId } = session.user;
 
+  const deadlineRow = await getDeadline("EVALUATION");
+  const evaluationDays = deadlineRow?.days ?? 5;
+
   let compliments: any[];
   if (role === "DIRETOR_CENTRAL") {
     compliments = await getPendingEvaluationsForCentralDirector(userId);
@@ -102,6 +116,7 @@ export default async function PendingEvaluationPage() {
     // ADMIN usa a mesma query manual (sem FK joins que podem falhar), sem restrição de área
     compliments = await getAdminPendingEvaluations();
   }
+  compliments = attachDeadline(compliments, evaluationDays);
 
   const isCentralDirector = role === "DIRETOR_CENTRAL";
 
@@ -121,6 +136,7 @@ export default async function PendingEvaluationPage() {
         currentUserId={userId}
         isCentralDirector={isCentralDirector}
         userRole={role}
+        evaluationDays={evaluationDays}
       />
     </div>
   );

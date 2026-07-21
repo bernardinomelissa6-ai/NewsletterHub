@@ -11,11 +11,10 @@ import { Loader2, Clock } from "lucide-react";
 const DEADLINE_TYPE_LABELS: Record<string, { label: string; description: string }> = {
   REGISTRATION: { label: "Registro de Elogios", description: "Prazo máximo para registrar um elogio após recebimento" },
   APPROVAL: { label: "Aprovação pelo Gestor", description: "Prazo para o gestor aprovar ou rejeitar um elogio" },
-  EVALUATION: { label: "Avaliação pelo Diretor", description: "Prazo para o diretor avaliar e atribuir medalha" },
+  EVALUATION: { label: "Avaliação pelo Diretor", description: "Prazo para o diretor avaliar e atribuir medalha, contado a partir da aprovação do gestor" },
 };
 
 interface Deadline {
-  id: string;
   type: string;
   days: number;
 }
@@ -33,7 +32,7 @@ export function DeadlineSettings({ deadlines }: { deadlines: Deadline[] }) {
       return;
     }
 
-    setSaving(deadline.id);
+    setSaving(deadline.type);
     try {
       const res = await fetch("/api/settings/deadlines", {
         method: "PUT",
@@ -42,7 +41,7 @@ export function DeadlineSettings({ deadlines }: { deadlines: Deadline[] }) {
       });
       if (!res.ok) { toast.error("Erro ao salvar prazo"); return; }
       setItems((prev) =>
-        prev.map((d) => d.id === deadline.id ? { ...d, days } : d)
+        prev.map((d) => d.type === deadline.type ? { ...d, days } : d)
       );
       toast.success("Prazo atualizado!");
     } finally {
@@ -50,24 +49,12 @@ export function DeadlineSettings({ deadlines }: { deadlines: Deadline[] }) {
     }
   }
 
-  if (items.length === 0) {
-    return (
-      <Card className="border-0 shadow-sm">
-        <CardContent className="py-12 text-center text-muted-foreground">
-          <Clock className="w-10 h-10 mx-auto mb-2 opacity-20" />
-          <p>Nenhum prazo configurado</p>
-          <p className="text-xs mt-1">Execute o seed do banco para criar os prazos padrão</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-4">
       {items.map((d) => {
         const config = DEADLINE_TYPE_LABELS[d.type];
         return (
-          <Card key={d.id} className="border-0 shadow-sm">
+          <Card key={d.type} className="border-0 shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Clock className="w-4 h-4 text-muted-foreground" />
@@ -80,10 +67,10 @@ export function DeadlineSettings({ deadlines }: { deadlines: Deadline[] }) {
             <CardContent>
               <div className="flex gap-3 items-end">
                 <div className="space-y-2">
-                  <Label htmlFor={`days-${d.id}`}>Limite em dias</Label>
+                  <Label htmlFor={`days-${d.type}`}>Limite em dias</Label>
                   <div className="flex items-center gap-2">
                     <Input
-                      id={`days-${d.id}`}
+                      id={`days-${d.type}`}
                       type="number"
                       min="1"
                       max="365"
@@ -91,7 +78,7 @@ export function DeadlineSettings({ deadlines }: { deadlines: Deadline[] }) {
                       onChange={(e) =>
                         setItems((prev) =>
                           prev.map((item) =>
-                            item.id === d.id ? { ...item, editingDays: e.target.value } : item
+                            item.type === d.type ? { ...item, editingDays: e.target.value } : item
                           )
                         )
                       }
@@ -106,7 +93,7 @@ export function DeadlineSettings({ deadlines }: { deadlines: Deadline[] }) {
                   size="sm"
                   className="mb-0.5"
                 >
-                  {saving === d.id
+                  {saving === d.type
                     ? <><Loader2 className="w-4 h-4 animate-spin" /> Salvando...</>
                     : "Salvar"}
                 </Button>

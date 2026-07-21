@@ -7,10 +7,13 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Edit, Paperclip, User, Calendar, Tag, Award, Trash2, FileText, ExternalLink } from "lucide-react";
+import { ArrowLeft, Edit, Paperclip, User, Calendar, Tag, Award, Trash2, FileText, ExternalLink, Pencil, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { EmailAttachmentPreview } from "./EmailAttachmentPreview";
+import { MedalIcon } from "@/components/ui/MedalIcon";
 import type { MedalType, ComplimentStatus } from "@/lib/supabase/types";
 
 const STATUS_LABELS: Record<ComplimentStatus, string> = {
@@ -31,6 +34,14 @@ const STATUS_CLASSES: Record<ComplimentStatus, string> = {
 
 const MEDAL_LABELS: Record<MedalType, string> = { SPECIAL: "Especial", GOLD: "Ouro", SILVER: "Prata", BRONZE: "Bronze" };
 const MEDAL_EMOJI: Record<MedalType, string> = { SPECIAL: "🏆", GOLD: "🥇", SILVER: "🥈", BRONZE: "🥉" };
+const MEDALS: MedalType[] = ["BRONZE", "SILVER", "GOLD", "SPECIAL"];
+const MEDAL_SCORE_COLORS: Record<MedalType, string> = {
+  SPECIAL: "text-purple-700 bg-purple-100 border-purple-300",
+  GOLD: "text-yellow-700 bg-yellow-100 border-yellow-300",
+  SILVER: "text-gray-600 bg-gray-100 border-gray-300",
+  BRONZE: "text-orange-700 bg-orange-100 border-orange-300",
+};
+const REEVALUATE_ROLES = ["DIRECTOR", "DIRETOR_CENTRAL", "ADMIN"];
 
 function getAttachmentKind(url: string, type?: string | null, name?: string | null): "pdf" | "image" | "email" | "other" {
   const ext = (name ?? url).split("?")[0].split(".").pop()?.toLowerCase() ?? "";
@@ -67,6 +78,10 @@ export function ComplimentDetail({ compliment: c, userRole, userId }: Props) {
   const router = useRouter();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [reevaluateOpen, setReevaluateOpen] = useState(false);
+  const [newMedal, setNewMedal] = useState<MedalType | "">("");
+  const [reevalReason, setReevalReason] = useState("");
+  const [reevalLoading, setReevalLoading] = useState(false);
 
   const canEdit = c.status === "DEVOLVIDO_PARA_AJUSTE" && (c.collaborator?.id === userId || userRole === "ADMIN");
   const isAdmin = userRole === "ADMIN";
@@ -74,6 +89,8 @@ export function ComplimentDetail({ compliment: c, userRole, userId }: Props) {
   const visibleEvaluations = canSeeAllEvaluations
     ? c.evaluations
     : c.evaluations.filter((e) => e.director_id === userId);
+  const myEvaluation = c.evaluations.find((e) => e.director_id === userId);
+  const canReevaluate = REEVALUATE_ROLES.includes(userRole) && !!myEvaluation;
 
   async function handleDelete() {
     setDeleting(true);
@@ -90,6 +107,33 @@ export function ComplimentDetail({ compliment: c, userRole, userId }: Props) {
     } finally {
       setDeleting(false);
       setConfirmDelete(false);
+    }
+  }
+
+  function openReevaluate() {
+    setNewMedal(myEvaluation?.medal ?? "");
+    setReevalReason("");
+    setReevaluateOpen(true);
+  }
+
+  async function handleReevaluate() {
+    if (!newMedal) { toast.error("Selecione uma medalha"); return; }
+    if (reevalReason.trim().length < 10) { toast.error("Informe o motivo da alteração (mínimo 10 caracteres)"); return; }
+
+    setReevalLoading(true);
+    try {
+      const res = await fetch(`/api/compliments/${c.id}/evaluate`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ medal: newMedal, reason: reevalReason }),
+      });
+      const json = await res.json();
+      if (!res.ok) { toast.error(json.error ?? "Erro ao editar avaliação"); return; }
+      toast.success("Avaliação atualizada com sucesso!");
+      setReevaluateOpen(false);
+      router.refresh();
+    } finally {
+      setReevalLoading(false);
     }
   }
 
@@ -241,12 +285,19 @@ export function ComplimentDetail({ compliment: c, userRole, userId }: Props) {
               {canSeeAllEvaluations ? "Avaliações dos Diretores" : "Minha Avaliação"}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             {visibleEvaluations.map((e, i) => (
               <div key={i} className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">{MEDAL_EMOJI[e.medal]}</span>
-                  <span className="font-semibold text-lg">{MEDAL_LABELS[e.medal]}</span>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">{MEDAL_EMOJI[e.medal]}</span>
+                    <span className="font-semibold text-lg">{MEDAL_LABELS[e.medal]}</span>
+                  </div>
+                  {canReevaluate && e.director_id === userId && (
+                    <Button variant="outline" size="sm" onClick={openReevaluate} className="gap-1.5">
+                      <Pencil className="w-3.5 h-3.5" /> Editar
+                    </Button>
+                  )}
                 </div>
                 <p className="text-sm">{e.justification}</p>
                 {e.comment && <p className="text-sm text-muted-foreground italic">"{e.comment}"</p>}
@@ -272,6 +323,50 @@ export function ComplimentDetail({ compliment: c, userRole, userId }: Props) {
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
               {deleting ? "Excluindo..." : "Excluir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reevaluate medal dialog */}
+      <Dialog open={reevaluateOpen} onOpenChange={setReevaluateOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Avaliação</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-5">
+            <div className="space-y-3">
+              <Label>Classificação / Medalha *</Label>
+              <div className="flex flex-col gap-2">
+                {MEDALS.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setNewMedal(m)}
+                    className={`flex items-center gap-4 px-4 py-2.5 rounded-lg border-2 font-medium transition-all text-left ${
+                      newMedal === m ? MEDAL_SCORE_COLORS[m] + " border-current" : "border-border hover:bg-accent"
+                    }`}
+                  >
+                    <MedalIcon type={m} size={64} />
+                    <span className="text-base font-semibold">{MEDAL_LABELS[m]}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Motivo da alteração *</Label>
+              <Textarea
+                placeholder="Explique o motivo da alteração da avaliação (mínimo 10 caracteres)..."
+                value={reevalReason}
+                onChange={(e) => setReevalReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReevaluateOpen(false)} disabled={reevalLoading}>Cancelar</Button>
+            <Button onClick={handleReevaluate} disabled={reevalLoading || !newMedal}>
+              {reevalLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Salvando...</> : "Salvar Alteração"}
             </Button>
           </DialogFooter>
         </DialogContent>

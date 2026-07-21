@@ -29,6 +29,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/compliments/pending-approval", label: "Aprovar Elogios", icon: ClipboardList, roles: ["MANAGER", "ADMIN", "DIRETOR_CENTRAL"] },
   { href: "/compliments/pending-evaluation", label: "Avaliar Elogios", icon: Shield, roles: ["DIRECTOR", "ADMIN", "DIRETOR_CENTRAL"] },
   { href: "/minhas-avaliacoes", label: "Minhas Avaliações", icon: History, roles: ["DIRECTOR", "DIRETOR_CENTRAL"] },
+  { href: "/minha-equipe", label: "Minha Equipe", icon: Users, roles: ["DIRECTOR", "DIRETOR_CENTRAL"] },
   { href: "/trainings", label: "Treinamentos", icon: BookOpen },
   { href: "/rankings/collaborators", label: "Ranking Colaboradores", icon: Trophy, roles: ["MANAGER", "ADMIN", "DIRETOR_CENTRAL"] },
   { href: "/rankings/areas", label: "Ranking Áreas", icon: Building2, roles: ["ADMIN", "DIRETOR_CENTRAL"] },

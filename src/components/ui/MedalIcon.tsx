@@ -70,11 +70,19 @@ export function MedalIcon({ type, size = 72 }: { type: MedalType; size?: number 
   const ry = cy + CR; // ribbon starts at bottom of inner circle = y 82
   const ribbonStroke = c.ribbonTrim ? { stroke: c.ribbonTrim, strokeWidth: 1.5, strokeLinejoin: "round" as const } : {};
 
+  // Short, thick ribbon tails with a shallow V-notch (swallow tail)
+  const RIB_TOP_W = 18;   // half-width where the ribbon meets the medal
+  const RIB_TIP_W = 28;   // half-width at the bottom tip (flares outward)
+  const RIB_LEN = 22;     // vertical length from attach point to tip
+  const RIB_NOTCH_W = 11; // half-width of the inward notch point
+  const RIB_NOTCH_UP = 8; // how far above the tip the notch point sits
+  const viewH = ry + RIB_LEN + 6;
+
   return (
     <svg
       width={size}
-      height={Math.round(size * 1.32)}
-      viewBox="0 0 100 132"
+      height={Math.round(size * (viewH / 100))}
+      viewBox={`0 0 100 ${viewH}`}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
@@ -106,15 +114,15 @@ export function MedalIcon({ type, size = 72 }: { type: MedalType; size?: number 
         </linearGradient>
       </defs>
 
-      {/* ── Left ribbon ── wide trapezoid with V-notch at bottom */}
+      {/* ── Left ribbon ── short, thick tail with V-notch at bottom */}
       <path
-        d={`M${cx},${ry} L${cx - 16},${ry + 2} L${cx - 32},128 L${cx - 14},114 Z`}
+        d={`M${cx},${ry} L${cx - RIB_TOP_W},${ry + 2} L${cx - RIB_TIP_W},${ry + RIB_LEN} L${cx - RIB_NOTCH_W},${ry + RIB_LEN - RIB_NOTCH_UP} Z`}
         fill={`url(#rrl-${t})`}
         {...ribbonStroke}
       />
       {/* ── Right ribbon ── mirror */}
       <path
-        d={`M${cx},${ry} L${cx + 16},${ry + 2} L${cx + 32},128 L${cx + 14},114 Z`}
+        d={`M${cx},${ry} L${cx + RIB_TOP_W},${ry + 2} L${cx + RIB_TIP_W},${ry + RIB_LEN} L${cx + RIB_NOTCH_W},${ry + RIB_LEN - RIB_NOTCH_UP} Z`}
         fill={`url(#rrr-${t})`}
         {...ribbonStroke}
       />

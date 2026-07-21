@@ -70,12 +70,15 @@ export function MedalIcon({ type, size = 72 }: { type: MedalType; size?: number 
   const ry = cy + CR; // ribbon starts at bottom of inner circle = y 82
   const ribbonStroke = c.ribbonTrim ? { stroke: c.ribbonTrim, strokeWidth: 1.5, strokeLinejoin: "round" as const } : {};
 
-  // Short, thick ribbon tails with a shallow V-notch (swallow tail)
-  const RIB_TOP_W = 18;   // half-width where the ribbon meets the medal
-  const RIB_TIP_W = 28;   // half-width at the bottom tip (flares outward)
-  const RIB_LEN = 22;     // vertical length from attach point to tip
-  const RIB_NOTCH_W = 11; // half-width of the inward notch point
-  const RIB_NOTCH_UP = 8; // how far above the tip the notch point sits
+  // Ribbon tails: both the outer and inner bottom corners reach (near) full
+  // length, with only a shallow notch cut from the middle of the bottom edge —
+  // matching a classic rosette ribbon rather than a single long spike.
+  const RIB_TOP_W = 14;    // half-width where the ribbon meets the medal
+  const RIB_BOT_W = 17;    // half-width of the outer bottom corner
+  const RIB_INNER_W = 6;   // half-width of the inner bottom corner (near center)
+  const RIB_NOTCH_W = 9;   // half-width of the notch tip
+  const RIB_LEN = 46;      // vertical length from attach point to the bottom corners
+  const RIB_NOTCH = 10;    // how far above the bottom the notch tip sits (shallow cut)
   const viewH = ry + RIB_LEN + 6;
 
   return (
@@ -114,15 +117,15 @@ export function MedalIcon({ type, size = 72 }: { type: MedalType; size?: number 
         </linearGradient>
       </defs>
 
-      {/* ── Left ribbon ── short, thick tail with V-notch at bottom */}
+      {/* ── Left ribbon ── band with a shallow V-notch at the bottom */}
       <path
-        d={`M${cx},${ry} L${cx - RIB_TOP_W},${ry + 2} L${cx - RIB_TIP_W},${ry + RIB_LEN} L${cx - RIB_NOTCH_W},${ry + RIB_LEN - RIB_NOTCH_UP} Z`}
+        d={`M${cx},${ry} L${cx - RIB_TOP_W},${ry + 3} L${cx - RIB_BOT_W},${ry + RIB_LEN} L${cx - RIB_NOTCH_W},${ry + RIB_LEN - RIB_NOTCH} L${cx - RIB_INNER_W},${ry + RIB_LEN} Z`}
         fill={`url(#rrl-${t})`}
         {...ribbonStroke}
       />
       {/* ── Right ribbon ── mirror */}
       <path
-        d={`M${cx},${ry} L${cx + RIB_TOP_W},${ry + 2} L${cx + RIB_TIP_W},${ry + RIB_LEN} L${cx + RIB_NOTCH_W},${ry + RIB_LEN - RIB_NOTCH_UP} Z`}
+        d={`M${cx},${ry} L${cx + RIB_TOP_W},${ry + 3} L${cx + RIB_BOT_W},${ry + RIB_LEN} L${cx + RIB_NOTCH_W},${ry + RIB_LEN - RIB_NOTCH} L${cx + RIB_INNER_W},${ry + RIB_LEN} Z`}
         fill={`url(#rrr-${t})`}
         {...ribbonStroke}
       />

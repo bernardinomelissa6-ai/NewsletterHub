@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ArrowLeft, Edit, Paperclip, User, Calendar, Tag, Award, Trash2, FileText, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
+import { EmailAttachmentPreview } from "./EmailAttachmentPreview";
 import type { MedalType, ComplimentStatus } from "@/lib/supabase/types";
 
 const STATUS_LABELS: Record<ComplimentStatus, string> = {
@@ -31,10 +32,11 @@ const STATUS_CLASSES: Record<ComplimentStatus, string> = {
 const MEDAL_LABELS: Record<MedalType, string> = { SPECIAL: "Especial", GOLD: "Ouro", SILVER: "Prata", BRONZE: "Bronze" };
 const MEDAL_EMOJI: Record<MedalType, string> = { SPECIAL: "🏆", GOLD: "🥇", SILVER: "🥈", BRONZE: "🥉" };
 
-function getAttachmentKind(url: string, type?: string | null, name?: string | null): "pdf" | "image" | "other" {
+function getAttachmentKind(url: string, type?: string | null, name?: string | null): "pdf" | "image" | "email" | "other" {
   const ext = (name ?? url).split("?")[0].split(".").pop()?.toLowerCase() ?? "";
   if (type === "application/pdf" || ext === "pdf") return "pdf";
   if ((type ?? "").startsWith("image/") || ["png", "jpg", "jpeg", "gif", "webp"].includes(ext)) return "image";
+  if (ext === "msg" || ext === "eml") return "email";
   return "other";
 }
 
@@ -185,6 +187,8 @@ export function ComplimentDetail({ compliment: c, userRole, userId }: Props) {
                     className="w-full max-h-[520px] object-contain rounded-lg border bg-muted/30"
                   />
                 )}
+
+                {kind === "email" && <EmailAttachmentPreview complimentId={c.id} />}
 
                 {kind === "other" && (
                   <a

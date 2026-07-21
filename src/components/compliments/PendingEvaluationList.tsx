@@ -28,6 +28,7 @@ interface Deadline {
   status: DeadlineStatus;
   daysLeft: number;
   deadlineDate: string;
+  stage: "REGULAR" | "CENTRAL";
 }
 
 interface Compliment {
@@ -46,10 +47,11 @@ interface Compliment {
   deadline: Deadline;
 }
 
-function formatDeadlineLabel(daysLeft: number): string {
-  if (daysLeft < 0) return `Atrasado há ${Math.abs(daysLeft)} dia${Math.abs(daysLeft) !== 1 ? "s" : ""}`;
-  if (daysLeft === 0) return "Vence hoje";
-  return `${daysLeft} dia${daysLeft !== 1 ? "s" : ""} restante${daysLeft !== 1 ? "s" : ""}`;
+function formatDeadlineLabel(daysLeft: number, stage: "REGULAR" | "CENTRAL"): string {
+  const suffix = stage === "CENTRAL" ? " (avaliação final)" : "";
+  if (daysLeft < 0) return `Atrasado há ${Math.abs(daysLeft)} dia${Math.abs(daysLeft) !== 1 ? "s" : ""}${suffix}`;
+  if (daysLeft === 0) return `Vence hoje${suffix}`;
+  return `${daysLeft} dia${daysLeft !== 1 ? "s" : ""} restante${daysLeft !== 1 ? "s" : ""}${suffix}`;
 }
 
 const MEDALS: MedalType[] = ["BRONZE", "SILVER", "GOLD", "SPECIAL"];
@@ -69,9 +71,10 @@ interface Props {
   isCentralDirector: boolean;
   userRole: string;
   evaluationDays: number;
+  centralEvaluationDays: number;
 }
 
-export function PendingEvaluationList({ compliments, currentUserId, isCentralDirector, userRole, evaluationDays }: Props) {
+export function PendingEvaluationList({ compliments, currentUserId, isCentralDirector, userRole, evaluationDays, centralEvaluationDays }: Props) {
   const canSeeAllEvaluations = userRole === "ADMIN" || userRole === "DIRETOR_CENTRAL";
   const router = useRouter();
   const [selected, setSelected] = useState<Compliment | null>(null);
@@ -170,7 +173,9 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
           <Clock className={`w-5 h-5 shrink-0 ${bannerConfig.color}`} />
           <div>
             <p className={`text-sm font-semibold ${bannerConfig.color}`}>
-              Prazo para avaliação: {evaluationDays} dia{evaluationDays !== 1 ? "s" : ""} corridos após a aprovação do gestor
+              {isCentralDirector
+                ? `Prazo para avaliação final: ${centralEvaluationDays} dia${centralEvaluationDays !== 1 ? "s" : ""} corridos após a 2ª avaliação regular`
+                : `Prazo para avaliação: ${evaluationDays} dia${evaluationDays !== 1 ? "s" : ""} corridos após a aprovação do gestor`}
             </p>
             {(overdueCount > 0 || warningCount > 0) && (
               <p className={`text-xs mt-0.5 ${bannerConfig.color}`}>
@@ -211,7 +216,7 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
                         variant="outline"
                         className={`${DEADLINE_STATUS_CONFIG[c.deadline.status].bg} ${DEADLINE_STATUS_CONFIG[c.deadline.status].color} ${DEADLINE_STATUS_CONFIG[c.deadline.status].border} gap-1`}
                       >
-                        <Clock className="w-3 h-3" /> {formatDeadlineLabel(c.deadline.daysLeft)}
+                        <Clock className="w-3 h-3" /> {formatDeadlineLabel(c.deadline.daysLeft, c.deadline.stage)}
                       </Badge>
                     </div>
                     <h3 className="font-semibold text-base">{c.insured}</h3>
@@ -280,7 +285,7 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
                   <Clock className={`w-5 h-5 shrink-0 ${DEADLINE_STATUS_CONFIG[selected.deadline.status].color}`} />
                   <div>
                     <p className={`text-sm font-semibold ${DEADLINE_STATUS_CONFIG[selected.deadline.status].color}`}>
-                      {formatDeadlineLabel(selected.deadline.daysLeft)}
+                      {formatDeadlineLabel(selected.deadline.daysLeft, selected.deadline.stage)}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Prazo final: {format(new Date(selected.deadline.deadlineDate), "dd/MM/yyyy", { locale: ptBR })}

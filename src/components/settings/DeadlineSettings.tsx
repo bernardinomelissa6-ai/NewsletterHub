@@ -12,6 +12,7 @@ const DEADLINE_TYPE_LABELS: Record<string, { label: string; description: string 
   REGISTRATION: { label: "Registro de Elogios", description: "Prazo máximo para registrar um elogio após recebimento" },
   APPROVAL: { label: "Aprovação pelo Gestor", description: "Prazo para o gestor aprovar ou rejeitar um elogio" },
   EVALUATION: { label: "Avaliação pelo Diretor", description: "Prazo para o diretor avaliar e atribuir medalha, contado a partir da aprovação do gestor" },
+  CENTRAL_EVALUATION: { label: "Avaliação Final pelo Diretor Central", description: "Prazo para o Diretor Central dar o parecer final, contado a partir da 2ª avaliação regular" },
 };
 
 interface Deadline {

@@ -16,7 +16,7 @@ export type NotificationType = typeof NotificationType[keyof typeof Notification
 export const AuditAction = { CREATE: "CREATE", UPDATE: "UPDATE", DELETE: "DELETE", APPROVE: "APPROVE", REJECT: "REJECT", RETURN_FOR_ADJUSTMENT: "RETURN_FOR_ADJUSTMENT", EVALUATE: "EVALUATE", REEVALUATE: "REEVALUATE", LOGIN: "LOGIN", LOGOUT: "LOGOUT", ACTIVATE_ACCOUNT: "ACTIVATE_ACCOUNT", DEACTIVATE_ACCOUNT: "DEACTIVATE_ACCOUNT", RESET_PASSWORD: "RESET_PASSWORD" } as const;
 export type AuditAction = typeof AuditAction[keyof typeof AuditAction];
 
-export const DeadlineType = { REGISTRATION: "REGISTRATION", APPROVAL: "APPROVAL", EVALUATION: "EVALUATION" } as const;
+export const DeadlineType = { REGISTRATION: "REGISTRATION", APPROVAL: "APPROVAL", EVALUATION: "EVALUATION", CENTRAL_EVALUATION: "CENTRAL_EVALUATION" } as const;
 export type DeadlineType = typeof DeadlineType[keyof typeof DeadlineType];
 
 export const ApprovalAction = { APPROVED: "APPROVED", REJECTED: "REJECTED", RETURNED: "RETURNED" } as const;

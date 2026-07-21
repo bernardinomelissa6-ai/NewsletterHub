@@ -26,7 +26,7 @@ export async function upsertDeadline(type: DeadlineType, days: number) {
 
 export async function getDeadlineMap(): Promise<Record<DeadlineType, number>> {
   const deadlines = await getDeadlines();
-  const defaults: Record<DeadlineType, number> = { REGISTRATION: 30, APPROVAL: 7, EVALUATION: 5 };
+  const defaults: Record<DeadlineType, number> = { REGISTRATION: 30, APPROVAL: 7, EVALUATION: 5, CENTRAL_EVALUATION: 3 };
   for (const d of deadlines) {
     defaults[d.type as DeadlineType] = d.days;
   }

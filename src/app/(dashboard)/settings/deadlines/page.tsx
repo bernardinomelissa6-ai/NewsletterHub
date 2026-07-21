@@ -6,7 +6,12 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Controle de Prazos" };
 
-const DEADLINE_ORDER: DeadlineType[] = [DeadlineType.REGISTRATION, DeadlineType.APPROVAL, DeadlineType.EVALUATION];
+const DEADLINE_ORDER: DeadlineType[] = [
+  DeadlineType.REGISTRATION,
+  DeadlineType.APPROVAL,
+  DeadlineType.EVALUATION,
+  DeadlineType.CENTRAL_EVALUATION,
+];
 
 export default async function DeadlinesPage() {
   await requireRole("ADMIN");

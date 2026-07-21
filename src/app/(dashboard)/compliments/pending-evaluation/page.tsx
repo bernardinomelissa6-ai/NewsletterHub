@@ -8,12 +8,33 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Avaliação de Elogios" };
 
-// Anexa o prazo de avaliação a cada elogio, contado a partir da aprovação do gestor
-function attachDeadline(compliments: any[], days: number) {
+const isCentralRole = (role: string) => ["DIRETOR_CENTRAL", "ADMIN"].includes(role);
+
+// Cada elogio tem seu próprio prazo, dependendo de em que etapa ele está:
+// - ainda faltam avaliações regulares → prazo do Diretor, contado da aprovação do gestor
+// - já tem as 2 avaliações regulares → prazo do Diretor Central, contado da 2ª avaliação
+function attachDeadline(compliments: any[], evaluationDays: number, centralEvaluationDays: number) {
   return compliments.map((c) => {
-    const approvedAt = c.approvals?.find((a: any) => a.action === "APPROVED")?.created_at ?? c.created_at;
-    const info = calculateDeadline(new Date(approvedAt), days);
-    return { ...c, deadline: { ...info, deadlineDate: info.deadlineDate.toISOString() } };
+    const regularEvals = (c.evaluations ?? [])
+      .filter((e: any) => !isCentralRole(e.director?.role ?? ""))
+      .slice()
+      .sort((a: any, b: any) => (a.created_at ?? "").localeCompare(b.created_at ?? ""));
+
+    let startDate: string;
+    let days: number;
+    let stage: "REGULAR" | "CENTRAL";
+    if (regularEvals.length >= 2) {
+      startDate = regularEvals[1].created_at ?? c.created_at;
+      days = centralEvaluationDays;
+      stage = "CENTRAL";
+    } else {
+      startDate = c.approvals?.find((a: any) => a.action === "APPROVED")?.created_at ?? c.created_at;
+      days = evaluationDays;
+      stage = "REGULAR";
+    }
+
+    const info = calculateDeadline(new Date(startDate), days);
+    return { ...c, deadline: { ...info, deadlineDate: info.deadlineDate.toISOString(), stage } };
   });
 }
 
@@ -56,7 +77,7 @@ async function getAdminPendingEvaluations(excludeDirectorId?: string) {
   // Run all independent queries in parallel
   const [{ data: approvalsData }, { data: evaluationsData }, { data: auditData }] = await Promise.all([
     supabaseAdmin.from("compliment_approvals").select("compliment_id, action, observation, created_at, manager_id").in("compliment_id", complimentIds),
-    supabaseAdmin.from("compliment_evaluations").select("compliment_id, medal, justification, director_id").in("compliment_id", complimentIds),
+    supabaseAdmin.from("compliment_evaluations").select("compliment_id, medal, justification, director_id, created_at").in("compliment_id", complimentIds),
     orphanIds.length > 0 ? supabaseAdmin.from("audit_logs").select("entity_id, user_name").eq("action", "CREATE").eq("entity_type", "Compliment").in("entity_id", orphanIds) : Promise.resolve({ data: [] }),
   ]);
 
@@ -103,8 +124,12 @@ export default async function PendingEvaluationPage() {
   const session = await requireRole("DIRECTOR", "DIRETOR_CENTRAL", "ADMIN");
   const { role, id: userId } = session.user;
 
-  const deadlineRow = await getDeadline("EVALUATION");
-  const evaluationDays = deadlineRow?.days ?? 5;
+  const [evaluationDeadlineRow, centralEvaluationDeadlineRow] = await Promise.all([
+    getDeadline("EVALUATION"),
+    getDeadline("CENTRAL_EVALUATION"),
+  ]);
+  const evaluationDays = evaluationDeadlineRow?.days ?? 5;
+  const centralEvaluationDays = centralEvaluationDeadlineRow?.days ?? 3;
 
   let compliments: any[];
   if (role === "DIRETOR_CENTRAL") {
@@ -116,7 +141,7 @@ export default async function PendingEvaluationPage() {
     // ADMIN usa a mesma query manual (sem FK joins que podem falhar), sem restrição de área
     compliments = await getAdminPendingEvaluations();
   }
-  compliments = attachDeadline(compliments, evaluationDays);
+  compliments = attachDeadline(compliments, evaluationDays, centralEvaluationDays);
 
   const isCentralDirector = role === "DIRETOR_CENTRAL";
 
@@ -137,6 +162,7 @@ export default async function PendingEvaluationPage() {
         isCentralDirector={isCentralDirector}
         userRole={role}
         evaluationDays={evaluationDays}
+        centralEvaluationDays={centralEvaluationDays}
       />
     </div>
   );

@@ -5,23 +5,34 @@ import type { MedalType } from "@/lib/supabase/types";
 
 type MedalImageMap = Record<MedalType, string | null>;
 
-let cachedImages: MedalImageMap | null = null;
+const EMPTY_MAP: MedalImageMap = { BRONZE: null, SILVER: null, GOLD: null, SPECIAL: null };
+
+// De-duplicates concurrent requests from multiple MedalIcon instances mounting
+// at once, but does NOT cache across mounts — each page visit fetches fresh so
+// an admin's image change shows up without requiring a hard refresh.
 let inFlight: Promise<MedalImageMap> | null = null;
 
 function useMedalImages(): MedalImageMap | null {
-  const [images, setImages] = useState<MedalImageMap | null>(cachedImages);
+  const [images, setImages] = useState<MedalImageMap | null>(null);
 
   useEffect(() => {
-    if (cachedImages) return;
+    let cancelled = false;
+
     if (!inFlight) {
       inFlight = fetch("/api/medal-images")
-        .then((res) => (res.ok ? res.json() : { BRONZE: null, SILVER: null, GOLD: null, SPECIAL: null }))
-        .catch(() => ({ BRONZE: null, SILVER: null, GOLD: null, SPECIAL: null }));
+        .then((res) => (res.ok ? res.json() : EMPTY_MAP))
+        .catch(() => EMPTY_MAP)
+        .finally(() => {
+          inFlight = null;
+        });
     }
     inFlight.then((data) => {
-      cachedImages = data;
-      setImages(data);
+      if (!cancelled) setImages(data);
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return images;

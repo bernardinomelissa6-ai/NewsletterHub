@@ -25,7 +25,7 @@ const CONFIGS: Record<MedalType, Colors> = {
   SPECIAL: {
     o1: "#F8D840", o2: "#C89800", o3: "#806000",
     i1: "#FFF0A0", i2: "#E8B800", i3: "#A07800",
-    r1: "#D42020", r2: "#780000",
+    r1: "#7B1FA2", r2: "#48086F",
   },
 };
 

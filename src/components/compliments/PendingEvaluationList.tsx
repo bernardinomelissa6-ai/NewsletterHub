@@ -391,11 +391,6 @@ export function PendingEvaluationList({ compliments, currentUserId, isCentralDir
                     <Button className="w-full gap-2" onClick={startEvaluation}>
                       <Shield className="w-4 h-4" /> Avaliar este Elogio
                     </Button>
-                    {isCentralDirector && (
-                      <p className="text-xs text-purple-700 font-medium text-center mt-2">
-                        Avaliação final — peso 50% (Diretor Central)
-                      </p>
-                    )}
                   </div>
                 )}
 

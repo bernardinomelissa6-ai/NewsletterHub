@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils/cn";
 import {
   LayoutDashboard, Star, BookOpen, Trophy, Users, Building2,
   ClipboardList, FileText, Bell, Settings, Shield, Clock,
-  ChevronLeft, ChevronRight, Award, History,
+  ChevronLeft, ChevronRight, Award, History, Medal,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -45,6 +45,7 @@ const ADMIN_ITEMS: NavItem[] = [
   { href: "/audit", label: "Auditoria", icon: ClipboardList },
   { href: "/settings/deadlines", label: "Prazos", icon: Clock },
   { href: "/settings/branches", label: "Ramos", icon: Building2 },
+  { href: "/settings/medals", label: "Medalhas", icon: Medal },
 ];
 
 const DIRETOR_CENTRAL_ITEMS: NavItem[] = [

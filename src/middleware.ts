@@ -10,6 +10,8 @@ const ROLE_ROUTES: Record<string, string[]> = {
   "/audit": ["ADMIN"],
   "/settings/deadlines": ["ADMIN"],
   "/settings/branches": ["ADMIN"],
+  "/settings/medals": ["ADMIN"],
+  "/api/settings/medal-images": ["ADMIN"],
   "/compliments/pending-approval": ["MANAGER", "ADMIN", "DIRETOR_CENTRAL"],
   "/compliments/pending-evaluation": ["DIRECTOR", "ADMIN", "DIRETOR_CENTRAL"],
   "/minha-equipe": ["DIRECTOR", "DIRETOR_CENTRAL"],

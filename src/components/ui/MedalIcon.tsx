@@ -1,4 +1,31 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import type { MedalType } from "@/lib/supabase/types";
+
+type MedalImageMap = Record<MedalType, string | null>;
+
+let cachedImages: MedalImageMap | null = null;
+let inFlight: Promise<MedalImageMap> | null = null;
+
+function useMedalImages(): MedalImageMap | null {
+  const [images, setImages] = useState<MedalImageMap | null>(cachedImages);
+
+  useEffect(() => {
+    if (cachedImages) return;
+    if (!inFlight) {
+      inFlight = fetch("/api/medal-images")
+        .then((res) => (res.ok ? res.json() : { BRONZE: null, SILVER: null, GOLD: null, SPECIAL: null }))
+        .catch(() => ({ BRONZE: null, SILVER: null, GOLD: null, SPECIAL: null }));
+    }
+    inFlight.then((data) => {
+      cachedImages = data;
+      setImages(data);
+    });
+  }, []);
+
+  return images;
+}
 
 interface Colors {
   o1: string; o2: string; o3: string; // outer rosette
@@ -55,6 +82,18 @@ function beadPositions(cx: number, cy: number, r: number, n: number): Array<{ x:
 }
 
 export function MedalIcon({ type, size = 72 }: { type: MedalType; size?: number }) {
+  const images = useMedalImages();
+  const customUrl = images?.[type];
+
+  if (customUrl) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={customUrl} alt={type} width={size} style={{ width: size, height: "auto" }} />;
+  }
+
+  return <MedalIconSvg type={type} size={size} />;
+}
+
+function MedalIconSvg({ type, size = 72 }: { type: MedalType; size?: number }) {
   const c = CONFIGS[type];
   const t = type;
 

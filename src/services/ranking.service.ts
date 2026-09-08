@@ -34,7 +34,7 @@ export async function getCollaboratorRanking(filter: RankingFilter = {}): Promis
 
   let complimentsQuery = supabaseAdmin
     .from("compliments")
-    .select("id, collaborator_id, final_medal")
+    .select("id, collaborator_id")
     .eq("status", "AVALIADO")
     .in("collaborator_id", userIds);
   if (year) complimentsQuery = complimentsQuery.eq("year", year);
@@ -51,19 +51,10 @@ export async function getCollaboratorRanking(filter: RankingFilter = {}): Promis
 
   const medalsByUser = new Map<string, { medal: string }[]>();
 
-  // Split: compliments with final_medal stored vs those needing fallback computation
-  const withMedal = (compliments ?? []).filter((c: any) => c.final_medal);
-  const withoutMedal = (compliments ?? []).filter((c: any) => !c.final_medal);
-
-  for (const c of withMedal) {
-    const list = medalsByUser.get(c.collaborator_id) ?? [];
-    list.push({ medal: c.final_medal });
-    medalsByUser.set(c.collaborator_id, list);
-  }
-
-  // Fallback: compute final medal from compliment_evaluations when final_medal is null
-  if (withoutMedal.length > 0) {
-    const ids = withoutMedal.map((c: any) => c.id);
+  // The compliments table has no stored final_medal column — the medal is
+  // always derived from the individual director evaluations.
+  if (compliments && compliments.length > 0) {
+    const ids = compliments.map((c: any) => c.id);
     const { data: evals } = await supabaseAdmin
       .from("compliment_evaluations")
       .select("compliment_id, director_id, medal")
@@ -75,7 +66,7 @@ export async function getCollaboratorRanking(filter: RankingFilter = {}): Promis
       : { data: [] };
     const roleMap = new Map((dirs ?? []).map((u: any) => [u.id, u.role as string]));
 
-    for (const c of withoutMedal) {
+    for (const c of compliments) {
       const complimentEvals = (evals ?? []).filter((e: any) => e.compliment_id === c.id);
       try {
         const { finalMedal } = calculateFinalMedal(
@@ -178,7 +169,7 @@ export async function getUserScore(userId: string, filter: RankingFilter = {}) {
 
   let query = supabaseAdmin
     .from("compliments")
-    .select("final_medal")
+    .select("id")
     .eq("status", "AVALIADO")
     .or(`collaborator_id.eq.${userId},submitted_by_id.eq.${userId}`);
 
@@ -187,10 +178,38 @@ export async function getUserScore(userId: string, filter: RankingFilter = {}) {
 
   const { data: compliments } = await query;
 
-  const medals = (compliments ?? []).filter((c) => c.final_medal).map((c) => ({ medal: c.final_medal as string }));
-  const score = medals.reduce((acc, { medal }) => acc + MEDAL_POINTS[medal as MedalType], 0);
   const medalCounts = { SPECIAL: 0, GOLD: 0, SILVER: 0, BRONZE: 0 };
-  for (const { medal } of medals) medalCounts[medal as keyof typeof medalCounts]++;
+  let score = 0;
+
+  if (compliments && compliments.length > 0) {
+    const ids = compliments.map((c) => c.id);
+    const { data: evals } = await supabaseAdmin
+      .from("compliment_evaluations")
+      .select("compliment_id, director_id, medal")
+      .in("compliment_id", ids);
+
+    const dirIds = [...new Set((evals ?? []).map((e) => e.director_id).filter(Boolean))];
+    const { data: dirs } = dirIds.length > 0
+      ? await supabaseAdmin.from("users").select("id, role").in("id", dirIds)
+      : { data: [] };
+    const roleMap = new Map((dirs ?? []).map((u: any) => [u.id, u.role as string]));
+
+    for (const c of compliments) {
+      const complimentEvals = (evals ?? []).filter((e) => e.compliment_id === c.id);
+      try {
+        const { finalMedal } = calculateFinalMedal(
+          complimentEvals.map((e) => ({
+            medal: e.medal as MedalType,
+            isCentralDirector: isCentral(roleMap.get(e.director_id) ?? ""),
+          }))
+        );
+        medalCounts[finalMedal]++;
+        score += MEDAL_POINTS[finalMedal];
+      } catch {
+        // Not enough evaluations to compute final medal — skip
+      }
+    }
+  }
 
   return { score, medals: medalCounts, totalCompliments: (compliments ?? []).length };
 }

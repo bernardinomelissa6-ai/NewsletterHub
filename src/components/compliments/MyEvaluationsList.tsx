@@ -61,7 +61,7 @@ export function MyEvaluationsList({ evaluations }: { evaluations: EvaluatedCompl
             <CardContent className="p-5">
               <div className="flex items-start gap-4">
                 <div className="shrink-0 mt-0.5">
-                  <MedalIcon type={e.my_medal} size={48} />
+                  <MedalIcon type={e.my_medal} size={56} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -107,7 +107,7 @@ export function MyEvaluationsList({ evaluations }: { evaluations: EvaluatedCompl
             <div className="space-y-4">
               <div className="flex gap-3">
                 <div className="flex-1 flex flex-col items-center py-4 gap-2 bg-muted/40 rounded-xl">
-                  <MedalIcon type={selected.my_medal} size={64} />
+                  <MedalIcon type={selected.my_medal} size={74} />
                   <div className="text-center">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Minha Avaliação</p>
                     <p className={`text-base font-bold mt-0.5 ${
@@ -122,7 +122,7 @@ export function MyEvaluationsList({ evaluations }: { evaluations: EvaluatedCompl
 
                 {selected.final_medal && (
                   <div className="flex-1 flex flex-col items-center py-4 gap-2 bg-green-50 rounded-xl">
-                    <MedalIcon type={selected.final_medal} size={64} />
+                    <MedalIcon type={selected.final_medal} size={74} />
                     <div className="text-center">
                       <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Resultado Final</p>
                       <p className={`text-base font-bold mt-0.5 ${

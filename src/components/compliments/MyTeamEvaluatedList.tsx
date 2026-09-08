@@ -70,7 +70,7 @@ export function MyTeamEvaluatedList({ compliments }: { compliments: TeamComplime
               <div className="flex items-start gap-4">
                 {c.finalMedal && (
                   <div className="shrink-0 mt-0.5">
-                    <MedalIcon type={c.finalMedal} size={48} />
+                    <MedalIcon type={c.finalMedal} size={56} />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
@@ -109,7 +109,7 @@ export function MyTeamEvaluatedList({ compliments }: { compliments: TeamComplime
             <div className="space-y-4">
               {selected.finalMedal && (
                 <div className="flex flex-col items-center py-4 gap-2 bg-muted/40 rounded-xl">
-                  <MedalIcon type={selected.finalMedal} size={80} />
+                  <MedalIcon type={selected.finalMedal} size={92} />
                   <div className="text-center">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Classificação Final</p>
                     <p className={`text-lg font-bold mt-0.5 ${

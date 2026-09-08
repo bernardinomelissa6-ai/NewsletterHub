@@ -108,7 +108,7 @@ export function MedalImageSettings({ medalImages }: { medalImages: Record<MedalT
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={url} alt={MEDAL_LABELS[type]} className="max-w-full max-h-full object-contain" />
                   ) : (
-                    <MedalIcon type={type} size={48} />
+                    <MedalIcon type={type} size={56} />
                   )}
                 </div>
 

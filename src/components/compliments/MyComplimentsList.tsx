@@ -74,7 +74,7 @@ export function MyComplimentsList({ compliments }: { compliments: Compliment[] }
                 <div className="flex items-start gap-4">
                   {c.final_medal && (
                     <div className="shrink-0 mt-0.5">
-                      <MedalIcon type={c.final_medal} size={48} />
+                      <MedalIcon type={c.final_medal} size={56} />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
@@ -150,7 +150,7 @@ export function MyComplimentsList({ compliments }: { compliments: Compliment[] }
             <div className="space-y-4">
               {selected.final_medal && (
                 <div className="flex flex-col items-center py-4 gap-2 bg-muted/40 rounded-xl">
-                  <MedalIcon type={selected.final_medal} size={80} />
+                  <MedalIcon type={selected.final_medal} size={92} />
                   <div className="text-center">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Sua Classificação</p>
                     <p className={`text-lg font-bold mt-0.5 ${

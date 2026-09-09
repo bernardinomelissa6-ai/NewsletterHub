@@ -2,13 +2,11 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getUserScore, getCollaboratorRanking, getAreaRanking } from "./ranking.service";
 
 export async function getCollaboratorDashboard(userId: string, year: number, quarter?: number) {
-  const filter = { year, ...(quarter && { quarter }) };
-
   const [scoreData, complimentsData, trainingsData, rankingData] = await Promise.all([
-    getUserScore(userId, filter),
+    getUserScore(userId, { year, quarter }),
     supabaseAdmin.from("compliments").select("status").or(`collaborator_id.eq.${userId},submitted_by_id.eq.${userId}`).eq("year", year),
     supabaseAdmin.from("trainings").select("type").eq("collaborator_id", userId).eq("year", year),
-    getCollaboratorRanking(filter),
+    getCollaboratorRanking({ year, quarters: quarter ? [quarter] : undefined }),
   ]);
 
   const complimentStats = { total: 0, approved: 0, rejected: 0, pending: 0, evaluated: 0 };

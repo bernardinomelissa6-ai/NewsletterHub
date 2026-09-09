@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Ranking da Equipe" };
 export default async function TeamRankingPage() {
   const session = await requireRole("MANAGER");
   const { year, quarter } = getCurrentQuarter();
-  const collaborators = await getTeamRanking(session.user.id, { year, quarter });
+  const collaborators = await getTeamRanking(session.user.id, { year, quarters: [quarter] });
 
   return (
     <div className="space-y-6">

@@ -3,15 +3,10 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { QuarterMultiSelect } from "./QuarterMultiSelect";
 import { Building2 } from "lucide-react";
 import type { AreaScore } from "@/services/ranking.service";
 
-const QUARTERS = [
-  { value: "1", label: "T1 (Jan-Mar)" },
-  { value: "2", label: "T2 (Abr-Jun)" },
-  { value: "3", label: "T3 (Jul-Set)" },
-  { value: "4", label: "T4 (Out-Dez)" },
-];
 const YEARS = Array.from({ length: 3 }, (_, i) => new Date().getFullYear() - i);
 const POSITION_BADGES = ["🥇", "🥈", "🥉"];
 
@@ -24,12 +19,13 @@ interface Props {
 export function AreaRankingTable({ initialData, currentYear, currentQuarter }: Props) {
   const [data, setData] = useState(initialData);
   const [year, setYear] = useState(String(currentYear));
-  const [quarter, setQuarter] = useState(String(currentQuarter));
+  const [quarters, setQuarters] = useState<number[]>([currentQuarter]);
   const [loading, setLoading] = useState(false);
 
-  async function fetchRanking(newYear = year, newQuarter = quarter) {
+  async function fetchRanking(newYear = year, newQuarters = quarters) {
     setLoading(true);
-    const params = new URLSearchParams({ year: newYear, quarter: newQuarter });
+    const params = new URLSearchParams({ year: newYear });
+    for (const q of newQuarters) params.append("quarter", String(q));
     const res = await fetch(`/api/rankings/areas?${params}`);
     const json = await res.json();
     setData(json);
@@ -40,15 +36,12 @@ export function AreaRankingTable({ initialData, currentYear, currentQuarter }: P
     <div className="space-y-5">
       <Card className="border-0 shadow-sm">
         <CardContent className="p-4">
-          <div className="flex gap-3">
-            <Select value={year} onValueChange={(v) => { setYear(v); fetchRanking(v, quarter); }}>
+          <div className="flex gap-3 items-center">
+            <Select value={year} onValueChange={(v) => { setYear(v); fetchRanking(v, quarters); }}>
               <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
               <SelectContent>{YEARS.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
             </Select>
-            <Select value={quarter} onValueChange={(v) => { setQuarter(v); fetchRanking(year, v); }}>
-              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
-              <SelectContent>{QUARTERS.map((q) => <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>)}</SelectContent>
-            </Select>
+            <QuarterMultiSelect selected={quarters} onChange={(v) => { setQuarters(v); fetchRanking(year, v); }} />
           </div>
         </CardContent>
       </Card>
@@ -70,8 +63,7 @@ export function AreaRankingTable({ initialData, currentYear, currentQuarter }: P
                   <th className="px-4 py-3">Área</th>
                   <th className="px-4 py-3 text-center hidden md:table-cell">Colaboradores</th>
                   <th className="px-4 py-3 text-center hidden md:table-cell">Elogios</th>
-                  <th className="px-4 py-3 text-center">Medalhas</th>
-                  <th className="px-4 py-3 text-right">Pontos</th>
+                  <th className="px-4 py-3 text-right">Medalhas</th>
                 </tr>
               </thead>
               <tbody>
@@ -83,14 +75,15 @@ export function AreaRankingTable({ initialData, currentYear, currentQuarter }: P
                     <td className="px-4 py-3 font-medium">{a.areaName}</td>
                     <td className="px-4 py-3 text-center text-muted-foreground hidden md:table-cell">{a.collaboratorCount}</td>
                     <td className="px-4 py-3 text-center text-muted-foreground hidden md:table-cell">{a.totalCompliments}</td>
-                    <td className="px-4 py-3 text-center text-xs">
-                      <div className="flex justify-center gap-1.5">
+                    <td className="px-4 py-3 text-right text-xs">
+                      <div className="flex justify-end items-center gap-1.5">
                         {a.specialCount > 0 && <span>🏆{a.specialCount}</span>}
                         {a.goldCount > 0 && <span>🥇{a.goldCount}</span>}
-                        {a.totalMedals > 0 && <span className="text-muted-foreground">total: {a.totalMedals}</span>}
+                        {a.silverCount > 0 && <span>🥈{a.silverCount}</span>}
+                        {a.bronzeCount > 0 && <span>🥉{a.bronzeCount}</span>}
+                        {a.totalMedals === 0 && <span className="text-muted-foreground">—</span>}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right font-bold">{a.totalScore}</td>
                   </tr>
                 ))}
               </tbody>

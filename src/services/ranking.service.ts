@@ -5,14 +5,15 @@ import type { MedalType } from "@/lib/supabase/types";
 
 export interface RankingFilter {
   year?: number;
-  quarter?: number;
+  /** One or more quarters to include (e.g. [1, 2] for the 1st semester). Omit for the whole year. */
+  quarters?: number[];
   areaId?: string;
 }
 
 const isCentral = (role: string) => ["DIRETOR_CENTRAL", "ADMIN"].includes(role);
 
 export async function getCollaboratorRanking(filter: RankingFilter = {}): Promise<CollaboratorScore[]> {
-  const { year, quarter, areaId } = filter;
+  const { year, quarters, areaId } = filter;
 
   // Manual query — avoid FK join area:areas(name) that can fail silently
   let usersQuery = supabaseAdmin
@@ -38,14 +39,14 @@ export async function getCollaboratorRanking(filter: RankingFilter = {}): Promis
     .eq("status", "AVALIADO")
     .in("collaborator_id", userIds);
   if (year) complimentsQuery = complimentsQuery.eq("year", year);
-  if (quarter) complimentsQuery = complimentsQuery.eq("quarter", quarter);
+  if (quarters && quarters.length > 0) complimentsQuery = complimentsQuery.in("quarter", quarters);
 
   let trainingsQuery = supabaseAdmin
     .from("trainings")
     .select("collaborator_id")
     .in("collaborator_id", userIds);
   if (year) trainingsQuery = trainingsQuery.eq("year", year);
-  if (quarter) trainingsQuery = trainingsQuery.eq("quarter", quarter);
+  if (quarters && quarters.length > 0) trainingsQuery = trainingsQuery.in("quarter", quarters);
 
   const [{ data: compliments }, { data: trainings }] = await Promise.all([complimentsQuery, trainingsQuery]);
 
@@ -122,6 +123,8 @@ export interface AreaScore {
   totalMedals: number;
   specialCount: number;
   goldCount: number;
+  silverCount: number;
+  bronzeCount: number;
 }
 
 export async function getAreaRanking(filter: RankingFilter = {}): Promise<AreaScore[]> {
@@ -140,6 +143,8 @@ export async function getAreaRanking(filter: RankingFilter = {}): Promise<AreaSc
       existing.totalMedals += c.specialCount + c.goldCount + c.silverCount + c.bronzeCount;
       existing.specialCount += c.specialCount;
       existing.goldCount += c.goldCount;
+      existing.silverCount += c.silverCount;
+      existing.bronzeCount += c.bronzeCount;
     } else {
       areaMap.set(c.areaId, {
         areaId: c.areaId,
@@ -150,11 +155,20 @@ export async function getAreaRanking(filter: RankingFilter = {}): Promise<AreaSc
         totalMedals: c.specialCount + c.goldCount + c.silverCount + c.bronzeCount,
         specialCount: c.specialCount,
         goldCount: c.goldCount,
+        silverCount: c.silverCount,
+        bronzeCount: c.bronzeCount,
       });
     }
   }
 
-  return Array.from(areaMap.values()).sort((a, b) => b.totalScore - a.totalScore);
+  // Ranked by medal tier (Especial > Ouro > Prata > Bronze), same rule as the collaborator ranking
+  return Array.from(areaMap.values()).sort((a, b) => {
+    if (b.specialCount !== a.specialCount) return b.specialCount - a.specialCount;
+    if (b.goldCount !== a.goldCount) return b.goldCount - a.goldCount;
+    if (b.silverCount !== a.silverCount) return b.silverCount - a.silverCount;
+    if (b.bronzeCount !== a.bronzeCount) return b.bronzeCount - a.bronzeCount;
+    return b.totalCompliments - a.totalCompliments;
+  });
 }
 
 export async function getTeamRanking(managerId: string, filter: RankingFilter = {}): Promise<CollaboratorScore[]> {
@@ -164,7 +178,7 @@ export async function getTeamRanking(managerId: string, filter: RankingFilter = 
   return collaborators.filter((c) => c.areaId && areaIds.includes(c.areaId));
 }
 
-export async function getUserScore(userId: string, filter: RankingFilter = {}) {
+export async function getUserScore(userId: string, filter: { year?: number; quarter?: number } = {}) {
   const { year, quarter } = filter;
 
   let query = supabaseAdmin

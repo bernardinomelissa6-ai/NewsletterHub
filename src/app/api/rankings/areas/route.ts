@@ -8,8 +8,8 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const year = searchParams.get("year") ? parseInt(searchParams.get("year")!) : undefined;
-  const quarter = searchParams.get("quarter") ? parseInt(searchParams.get("quarter")!) : undefined;
+  const quarters = searchParams.getAll("quarter").map((q) => parseInt(q)).filter((q) => !isNaN(q));
 
-  const ranking = await getAreaRanking({ year, quarter });
+  const ranking = await getAreaRanking({ year, quarters: quarters.length > 0 ? quarters : undefined });
   return NextResponse.json(ranking);
 }

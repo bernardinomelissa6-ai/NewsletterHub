@@ -15,8 +15,8 @@ interface Props {
     compliments: { total: number; byStatus: Record<string, number> };
     trainings: number;
     medals: number;
-    topCollaborators: Array<{ userId: string; name: string; score: number; specialCount: number; goldCount: number }>;
-    topAreas: Array<{ areaId: string; areaName: string; totalScore: number; collaboratorCount: number }>;
+    topCollaborators: Array<{ userId: string; name: string; specialCount: number; goldCount: number; silverCount: number; bronzeCount: number }>;
+    topAreas: Array<{ areaId: string; areaName: string; collaboratorCount: number; specialCount: number; goldCount: number; silverCount: number; bronzeCount: number }>;
   };
 }
 
@@ -140,12 +140,13 @@ export function AdminDashboard({ data }: Props) {
                 <span className="text-lg font-bold text-muted-foreground w-6">#{i + 1}</span>
                 <div className="flex-1">
                   <p className="text-sm font-medium">{c.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {c.specialCount > 0 && `${c.specialCount}🏆 `}
-                    {c.goldCount > 0 && `${c.goldCount}🥇`}
-                  </p>
                 </div>
-                <span className="text-sm font-bold text-primary">{c.score} pts</span>
+                <div className="flex items-center gap-1.5 text-sm">
+                  {c.specialCount > 0 && <span>🏆{c.specialCount}</span>}
+                  {c.goldCount > 0 && <span>🥇{c.goldCount}</span>}
+                  {c.silverCount > 0 && <span>🥈{c.silverCount}</span>}
+                  {c.bronzeCount > 0 && <span>🥉{c.bronzeCount}</span>}
+                </div>
               </div>
             ))}
             {data.topCollaborators.length === 0 && (
@@ -170,7 +171,12 @@ export function AdminDashboard({ data }: Props) {
                   <p className="text-sm font-medium">{a.areaName}</p>
                   <p className="text-xs text-muted-foreground">{a.collaboratorCount} colaborador{a.collaboratorCount !== 1 ? "es" : ""}</p>
                 </div>
-                <span className="text-sm font-bold text-primary">{a.totalScore} pts</span>
+                <div className="flex items-center gap-1.5 text-sm">
+                  {a.specialCount > 0 && <span>🏆{a.specialCount}</span>}
+                  {a.goldCount > 0 && <span>🥇{a.goldCount}</span>}
+                  {a.silverCount > 0 && <span>🥈{a.silverCount}</span>}
+                  {a.bronzeCount > 0 && <span>🥉{a.bronzeCount}</span>}
+                </div>
               </div>
             ))}
             {data.topAreas.length === 0 && (

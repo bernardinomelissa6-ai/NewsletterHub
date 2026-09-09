@@ -14,7 +14,7 @@ export default async function CollaboratorsRankingPage() {
   const currentYear = now.getUTCFullYear();
   const currentQuarter = Math.ceil((now.getUTCMonth() + 1) / 3);
 
-  const filter: { year: number; quarter: number; areaId?: string } = { year: currentYear, quarter: currentQuarter };
+  const filter: { year: number; quarters: number[]; areaId?: string } = { year: currentYear, quarters: [currentQuarter] };
 
   if (role === "MANAGER") {
     const { data: areas } = await supabaseAdmin.from("areas").select("id").eq("manager_id", userId);
@@ -32,7 +32,7 @@ export default async function CollaboratorsRankingPage() {
       <div>
         <h1 className="text-2xl font-bold">Ranking de Colaboradores</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Classificação por pontuação acumulada de medalhas
+          Classificação por medalhas conquistadas
         </p>
       </div>
       <CollaboratorRankingTable

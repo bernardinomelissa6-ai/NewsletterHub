@@ -2,16 +2,9 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { QuarterMultiSelect } from "./QuarterMultiSelect";
 import type { CollaboratorScore } from "@/lib/utils/ranking";
-
-const QUARTERS = [
-  { value: "1", label: "T1 (Jan-Mar)" },
-  { value: "2", label: "T2 (Abr-Jun)" },
-  { value: "3", label: "T3 (Jul-Set)" },
-  { value: "4", label: "T4 (Out-Dez)" },
-];
 
 const YEARS = Array.from({ length: 4 }, (_, i) => new Date().getFullYear() - i);
 
@@ -24,12 +17,13 @@ interface Props {
 export function TeamRankingTable({ collaborators: initialData, initialYear, initialQuarter }: Props) {
   const [data, setData] = useState(initialData);
   const [year, setYear] = useState(String(initialYear));
-  const [quarter, setQuarter] = useState(String(initialQuarter));
+  const [quarters, setQuarters] = useState<number[]>([initialQuarter]);
   const [loading, setLoading] = useState(false);
 
-  async function fetchRanking(newYear = year, newQuarter = quarter) {
+  async function fetchRanking(newYear = year, newQuarters = quarters) {
     setLoading(true);
-    const params = new URLSearchParams({ year: newYear, quarter: newQuarter });
+    const params = new URLSearchParams({ year: newYear });
+    for (const q of newQuarters) params.append("quarter", String(q));
     const res = await fetch(`/api/rankings/collaborators?${params}`);
     const json = await res.json();
     setData(json);
@@ -50,15 +44,12 @@ export function TeamRankingTable({ collaborators: initialData, initialYear, init
       {/* Filters */}
       <Card className="border-0 shadow-sm">
         <CardContent className="p-4">
-          <div className="flex gap-3 flex-wrap">
-            <Select value={year} onValueChange={(v) => { setYear(v); fetchRanking(v, quarter); }}>
+          <div className="flex gap-3 flex-wrap items-center">
+            <Select value={year} onValueChange={(v) => { setYear(v); fetchRanking(v, quarters); }}>
               <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
               <SelectContent>{YEARS.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
             </Select>
-            <Select value={quarter} onValueChange={(v) => { setQuarter(v); fetchRanking(year, v); }}>
-              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
-              <SelectContent>{QUARTERS.map((q) => <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>)}</SelectContent>
-            </Select>
+            <QuarterMultiSelect selected={quarters} onChange={(v) => { setQuarters(v); fetchRanking(year, v); }} />
           </div>
         </CardContent>
       </Card>
@@ -87,7 +78,6 @@ export function TeamRankingTable({ collaborators: initialData, initialYear, init
                       <div className="text-2xl">{podiumEmoji[i]}</div>
                       <div className="text-center">
                         <p className="font-semibold text-sm leading-tight">{c.name}</p>
-                        <p className="text-xs text-muted-foreground">{c.score} pts</p>
                       </div>
                       <div className={`w-full rounded-t-lg border-2 ${podiumBg[i]} ${podiumBorder[i]} ${podiumHeights[i]} flex items-center justify-center`}>
                         <span className="text-lg font-bold text-muted-foreground">{podiumRanks[i]}</span>
@@ -108,7 +98,6 @@ export function TeamRankingTable({ collaborators: initialData, initialYear, init
                     <tr className="text-xs text-muted-foreground">
                       <th className="text-left p-4 w-12">#</th>
                       <th className="text-left p-4">Colaborador</th>
-                      <th className="text-right p-4">Pontos</th>
                       <th className="text-right p-4 hidden sm:table-cell">🏆</th>
                       <th className="text-right p-4 hidden sm:table-cell">🥇</th>
                       <th className="text-right p-4 hidden sm:table-cell">🥈</th>
@@ -128,9 +117,6 @@ export function TeamRankingTable({ collaborators: initialData, initialYear, init
                         </td>
                         <td className="p-4">
                           <p className="font-medium text-sm">{c.name}</p>
-                        </td>
-                        <td className="p-4 text-right">
-                          <Badge variant="secondary" className="font-mono">{c.score} pts</Badge>
                         </td>
                         <td className="p-4 text-right hidden sm:table-cell text-sm">{c.specialCount || "–"}</td>
                         <td className="p-4 text-right hidden sm:table-cell text-sm">{c.goldCount || "–"}</td>

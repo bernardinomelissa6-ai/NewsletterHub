@@ -46,11 +46,14 @@ export interface CollaboratorScore {
   totalTrainings: number;
 }
 
+// Ranked by medal tier — like an Olympic medal table: most Especial wins,
+// ties broken by Ouro, then Prata, then Bronze. No abstract point score involved.
 export function sortCollaborators(collaborators: CollaboratorScore[]): CollaboratorScore[] {
   return [...collaborators].sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
     if (b.specialCount !== a.specialCount) return b.specialCount - a.specialCount;
     if (b.goldCount !== a.goldCount) return b.goldCount - a.goldCount;
+    if (b.silverCount !== a.silverCount) return b.silverCount - a.silverCount;
+    if (b.bronzeCount !== a.bronzeCount) return b.bronzeCount - a.bronzeCount;
     if (b.totalCompliments !== a.totalCompliments) return b.totalCompliments - a.totalCompliments;
     return b.totalTrainings - a.totalTrainings;
   });

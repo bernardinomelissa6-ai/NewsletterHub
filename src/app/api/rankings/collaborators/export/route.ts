@@ -11,12 +11,13 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const year = searchParams.get("year") ? parseInt(searchParams.get("year")!) : undefined;
-  const quarter = searchParams.get("quarter") ? parseInt(searchParams.get("quarter")!) : undefined;
+  const quarters = searchParams.getAll("quarter").map((q) => parseInt(q)).filter((q) => !isNaN(q));
   const exportFormat = searchParams.get("format") ?? "csv";
 
-  const ranking = await getCollaboratorRanking({ year, quarter });
+  const ranking = await getCollaboratorRanking({ year, quarters: quarters.length > 0 ? quarters : undefined });
 
-  const fileBase = `ranking${year ? `-${year}` : ""}${quarter ? `-T${quarter}` : ""}`;
+  const quarterLabel = quarters.length > 0 ? `-T${quarters.join("+T")}` : "";
+  const fileBase = `ranking${year ? `-${year}` : ""}${quarterLabel}`;
 
   const headers = ["Posição", "Colaborador", "Área", "Pontos", "Especial 🏆", "Ouro 🥇", "Prata 🥈", "Bronze 🥉", "Total Elogios", "Total Treinamentos"];
   const rows = ranking.map((r, i) => [
@@ -52,7 +53,7 @@ export async function GET(req: NextRequest) {
     doc.setFontSize(14);
     doc.text("Ranking de Colaboradores", 14, 15);
     doc.setFontSize(10);
-    doc.text(`Período: ${year ?? "Todos os anos"}${quarter ? ` | T${quarter}` : ""}`, 14, 22);
+    doc.text(`Período: ${year ?? "Todos os anos"}${quarters.length > 0 ? ` | ${quarters.map((q) => `T${q}`).join(", ")}` : ""}`, 14, 22);
     autoTable(doc, {
       startY: 28,
       head: [["#", "Colaborador", "Área", "Pontos", "Especial", "Ouro", "Prata", "Bronze", "Elogios", "Treinamentos"]],

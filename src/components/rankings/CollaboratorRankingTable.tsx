@@ -3,15 +3,9 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trophy, Medal } from "lucide-react";
+import { QuarterMultiSelect } from "./QuarterMultiSelect";
+import { Trophy } from "lucide-react";
 import type { CollaboratorScore } from "@/lib/utils/ranking";
-
-const QUARTERS = [
-  { value: "1", label: "T1 (Jan-Mar)" },
-  { value: "2", label: "T2 (Abr-Jun)" },
-  { value: "3", label: "T3 (Jul-Set)" },
-  { value: "4", label: "T4 (Out-Dez)" },
-];
 
 const YEARS = Array.from({ length: 3 }, (_, i) => new Date().getFullYear() - i);
 const PODIUM_COLORS = ["text-yellow-500", "text-gray-400", "text-orange-500"];
@@ -28,13 +22,14 @@ interface Props {
 export function CollaboratorRankingTable({ initialData, areas, currentYear, currentQuarter, userRole }: Props) {
   const [data, setData] = useState(initialData);
   const [year, setYear] = useState(String(currentYear));
-  const [quarter, setQuarter] = useState(String(currentQuarter));
+  const [quarters, setQuarters] = useState<number[]>([currentQuarter]);
   const [areaId, setAreaId] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function fetchRanking(newYear = year, newQuarter = quarter, newAreaId = areaId) {
+  async function fetchRanking(newYear = year, newQuarters = quarters, newAreaId = areaId) {
     setLoading(true);
-    const params = new URLSearchParams({ year: newYear, quarter: newQuarter });
+    const params = new URLSearchParams({ year: newYear });
+    for (const q of newQuarters) params.append("quarter", String(q));
     if (newAreaId) params.set("areaId", newAreaId);
     const res = await fetch(`/api/rankings/collaborators?${params}`);
     const json = await res.json();
@@ -50,17 +45,14 @@ export function CollaboratorRankingTable({ initialData, areas, currentYear, curr
       {/* Filters */}
       <Card className="border-0 shadow-sm">
         <CardContent className="p-4">
-          <div className="flex gap-3 flex-wrap">
-            <Select value={year} onValueChange={(v) => { setYear(v); fetchRanking(v, quarter, areaId); }}>
+          <div className="flex gap-3 flex-wrap items-center">
+            <Select value={year} onValueChange={(v) => { setYear(v); fetchRanking(v, quarters, areaId); }}>
               <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
               <SelectContent>{YEARS.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
             </Select>
-            <Select value={quarter} onValueChange={(v) => { setQuarter(v); fetchRanking(year, v, areaId); }}>
-              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
-              <SelectContent>{QUARTERS.map((q) => <SelectItem key={q.value} value={q.value}>{q.label}</SelectItem>)}</SelectContent>
-            </Select>
+            <QuarterMultiSelect selected={quarters} onChange={(v) => { setQuarters(v); fetchRanking(year, v, areaId); }} />
             {(userRole === "ADMIN" || userRole === "DIRECTOR") && areas.length > 0 && (
-              <Select value={areaId} onValueChange={(v) => { setAreaId(v); fetchRanking(year, quarter, v); }}>
+              <Select value={areaId} onValueChange={(v) => { setAreaId(v); fetchRanking(year, quarters, v); }}>
                 <SelectTrigger className="w-48"><SelectValue placeholder="Todas as áreas" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">Todas as áreas</SelectItem>
@@ -81,12 +73,12 @@ export function CollaboratorRankingTable({ initialData, areas, currentYear, curr
                 <div className="text-3xl mb-2">{POSITION_BADGES[i]}</div>
                 <p className="font-bold text-sm leading-tight">{c.name}</p>
                 {c.areaName && <p className="text-xs text-muted-foreground mt-0.5">{c.areaName}</p>}
-                <p className={`text-2xl font-bold mt-3 ${PODIUM_COLORS[i]}`}>{c.score} pts</p>
-                <div className="flex justify-center gap-2 mt-2 text-xs">
+                <div className={`flex justify-center gap-2 mt-3 text-sm font-semibold ${PODIUM_COLORS[i]}`}>
                   {c.specialCount > 0 && <span>🏆 {c.specialCount}</span>}
                   {c.goldCount > 0 && <span>🥇 {c.goldCount}</span>}
                   {c.silverCount > 0 && <span>🥈 {c.silverCount}</span>}
                   {c.bronzeCount > 0 && <span>🥉 {c.bronzeCount}</span>}
+                  {!c.specialCount && !c.goldCount && !c.silverCount && !c.bronzeCount && <span className="text-muted-foreground font-normal">Sem medalhas</span>}
                 </div>
               </CardContent>
             </Card>
@@ -111,8 +103,7 @@ export function CollaboratorRankingTable({ initialData, areas, currentYear, curr
                   <th className="px-4 py-3 w-12">#</th>
                   <th className="px-4 py-3">Colaborador</th>
                   <th className="px-4 py-3 hidden md:table-cell">Área</th>
-                  <th className="px-4 py-3 text-center">Medalhas</th>
-                  <th className="px-4 py-3 text-right">Pontos</th>
+                  <th className="px-4 py-3 text-right">Medalhas</th>
                 </tr>
               </thead>
               <tbody>
@@ -123,8 +114,8 @@ export function CollaboratorRankingTable({ initialData, areas, currentYear, curr
                     </td>
                     <td className="px-4 py-3 font-medium">{c.name}</td>
                     <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{c.areaName ?? "—"}</td>
-                    <td className="px-4 py-3 text-center text-xs">
-                      <div className="flex items-center justify-center gap-1.5">
+                    <td className="px-4 py-3 text-right text-xs">
+                      <div className="flex items-center justify-end gap-1.5">
                         {c.specialCount > 0 && <span>🏆{c.specialCount}</span>}
                         {c.goldCount > 0 && <span>🥇{c.goldCount}</span>}
                         {c.silverCount > 0 && <span>🥈{c.silverCount}</span>}
@@ -132,7 +123,6 @@ export function CollaboratorRankingTable({ initialData, areas, currentYear, curr
                         {!c.specialCount && !c.goldCount && !c.silverCount && !c.bronzeCount && <span className="text-muted-foreground">—</span>}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right font-bold">{c.score}</td>
                   </tr>
                 ))}
               </tbody>

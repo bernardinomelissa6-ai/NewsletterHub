@@ -12,14 +12,14 @@ export default async function AreasRankingPage() {
   const currentYear = now.getUTCFullYear();
   const currentQuarter = Math.ceil((now.getUTCMonth() + 1) / 3);
 
-  const ranking = await getAreaRanking({ year: currentYear, quarter: currentQuarter });
+  const ranking = await getAreaRanking({ year: currentYear, quarters: [currentQuarter] });
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Ranking por Área</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Classificação das áreas por pontuação total da equipe
+          Classificação das áreas por medalhas conquistadas pela equipe
         </p>
       </div>
       <AreaRankingTable initialData={ranking} currentYear={currentYear} currentQuarter={currentQuarter} />

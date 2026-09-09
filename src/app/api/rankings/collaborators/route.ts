@@ -8,12 +8,12 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const year = searchParams.get("year") ? parseInt(searchParams.get("year")!) : undefined;
-  const quarter = searchParams.get("quarter") ? parseInt(searchParams.get("quarter")!) : undefined;
+  const quarters = searchParams.getAll("quarter").map((q) => parseInt(q)).filter((q) => !isNaN(q));
   const areaId = searchParams.get("areaId") ?? undefined;
 
   const filter: Record<string, unknown> = {};
   if (year) filter.year = year;
-  if (quarter) filter.quarter = quarter;
+  if (quarters.length > 0) filter.quarters = quarters;
   if (areaId && ["ADMIN", "DIRECTOR"].includes(session.user.role)) filter.areaId = areaId;
   else if (session.user.role === "MANAGER" && session.user.areaId) filter.areaId = session.user.areaId;
 

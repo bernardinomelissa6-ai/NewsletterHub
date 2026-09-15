@@ -121,7 +121,7 @@ export function TrainingForm({ collaborators, branches, defaultCollaboratorName,
             </div>
             <div className="space-y-2">
               <Label htmlFor="ramo">Ramo *</Label>
-              <Input id="ramo" placeholder="Ex: Automóvel, Vida, RC..." {...register("ramo")} />
+              <Input id="ramo" {...register("ramo")} />
               {errors.ramo && <p className="text-xs text-destructive">{errors.ramo.message}</p>}
             </div>
           </div>

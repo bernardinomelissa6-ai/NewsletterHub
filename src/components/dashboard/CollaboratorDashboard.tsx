@@ -94,7 +94,7 @@ export function CollaboratorDashboard({ data, userName, year }: Props) {
         {/* Treinamentos por tipo */}
         <Card className="border-0 shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold">Desenvolvimento Profissional</CardTitle>
+            <CardTitle className="text-base font-semibold">Treinamentos</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={220}>

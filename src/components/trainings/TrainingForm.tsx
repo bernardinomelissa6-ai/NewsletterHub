@@ -13,7 +13,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { createTrainingSchema, type CreateTrainingInput } from "@/lib/validations/training.schema";
 import { Loader2, Paperclip, Upload, X } from "lucide-react";
 
-const BRANCHES = ["Automóvel", "Vida", "Saúde", "Residencial", "Patrimonial", "Engenharia", "Transportes", "Responsabilidade Civil", "Outros"];
 const TYPES = [
   { value: "TRAINING", label: "Treinamento" },
   { value: "COURSE", label: "Curso" },
@@ -26,13 +25,19 @@ interface Collaborator {
   area?: { name: string } | null;
 }
 
+interface Branch {
+  id: string;
+  name: string;
+}
+
 interface Props {
   collaborators: Collaborator[];
+  branches: Branch[];
   defaultCollaboratorName?: string;
   currentUserName?: string;
 }
 
-export function TrainingForm({ collaborators, defaultCollaboratorName, currentUserName }: Props) {
+export function TrainingForm({ collaborators, branches, defaultCollaboratorName, currentUserName }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -108,7 +113,7 @@ export function TrainingForm({ collaborators, defaultCollaboratorName, currentUs
                 <SelectValue placeholder="Selecione o ramo" />
               </SelectTrigger>
               <SelectContent>
-                {BRANCHES.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                {branches.map((b) => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
               </SelectContent>
             </Select>
             {errors.branch && <p className="text-xs text-destructive">{errors.branch.message}</p>}

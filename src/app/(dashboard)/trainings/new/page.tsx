@@ -1,5 +1,6 @@
 import { requireAuth } from "@/lib/auth/session";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getBranches } from "@/services/branch.service";
 import { TrainingForm } from "@/components/trainings/TrainingForm";
 import type { Metadata } from "next";
 
@@ -24,6 +25,7 @@ export default async function NewTrainingPage() {
   }
 
   const defaultCollaboratorName = collaborators[0]?.name ?? userName ?? "";
+  const branches = await getBranches(true);
 
   return (
     <div className="max-w-2xl">
@@ -33,7 +35,7 @@ export default async function NewTrainingPage() {
           Registre um treinamento, curso ou consultoria realizada
         </p>
       </div>
-      <TrainingForm collaborators={collaborators} defaultCollaboratorName={defaultCollaboratorName} currentUserName={userName ?? ""} />
+      <TrainingForm collaborators={collaborators} branches={branches} defaultCollaboratorName={defaultCollaboratorName} currentUserName={userName ?? ""} />
     </div>
   );
 }

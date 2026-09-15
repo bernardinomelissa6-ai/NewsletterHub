@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
       date: formData.get("date") as string,
       type: formData.get("type") as string,
       branch: formData.get("branch") as string,
+      ramo: formData.get("ramo") as string,
       collaboratorId: formData.get("collaboratorId") as string,
     };
 

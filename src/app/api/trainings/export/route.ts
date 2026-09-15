@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 
   const fileBase = `treinamentos-${year ?? "todos"}${quarter ? `-T${quarter}` : ""}`;
 
-  const headers = ["ID", "Nome/Empresa", "Colaborador", "Área", "Tipo", "Ramo", "Data", "Trimestre", "Ano"];
+  const headers = ["ID", "Nome/Empresa", "Colaborador", "Área do Colaborador", "Tipo", "Área", "Ramo", "Data", "Trimestre", "Ano"];
   const rows = allTrainings.map((t: any) => [
     t.id,
     t.insured,
@@ -43,6 +43,7 @@ export async function GET(req: NextRequest) {
     t.collaborator?.area?.name ?? "",
     TYPE_LABELS[t.type] ?? t.type,
     t.branch,
+    t.ramo,
     format(new Date(t.date), "dd/MM/yyyy", { locale: ptBR }),
     `T${t.quarter}`,
     t.year,
@@ -71,13 +72,14 @@ export async function GET(req: NextRequest) {
     doc.text(`Período: ${year ?? "Todos os anos"}${quarter ? ` | T${quarter}` : ""}`, 14, 22);
     autoTable(doc, {
       startY: 28,
-      head: [["Nome/Empresa", "Colaborador", "Área", "Tipo", "Ramo", "Data", "T", "Ano"]],
+      head: [["Nome/Empresa", "Colaborador", "Área Colab.", "Tipo", "Área", "Ramo", "Data", "T", "Ano"]],
       body: allTrainings.map((t: any) => [
         t.insured,
         t.collaborator?.name ?? "",
         t.collaborator?.area?.name ?? "",
         TYPE_LABELS[t.type] ?? t.type,
         t.branch,
+        t.ramo,
         format(new Date(t.date), "dd/MM/yyyy", { locale: ptBR }),
         `T${t.quarter}`,
         t.year,

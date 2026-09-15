@@ -5,7 +5,8 @@ export const createTrainingSchema = z.object({
   insured: z.string().min(2, "Nome obrigatório").max(300),
   date: z.string().min(1, "Data obrigatória"),
   type: z.nativeEnum(TrainingType, { errorMap: () => ({ message: "Tipo inválido" }) }),
-  branch: z.string().min(1, "Ramo obrigatório").max(200),
+  branch: z.string().min(1, "Área obrigatória").max(200),
+  ramo: z.string().min(1, "Ramo obrigatório").max(200),
   collaboratorId: z.string().min(2, "Nome do colaborador obrigatório"),
 });
 

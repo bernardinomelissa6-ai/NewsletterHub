@@ -226,6 +226,7 @@ model Training {
   date           DateTime     @db.Date
   type           TrainingType
   branch         String       @db.VarChar(200)
+  ramo           String       @db.VarChar(200)
   collaboratorId String       @map("collaborator_id")
   submittedById  String       @map("submitted_by_id")
   attachmentUrl  String?      @map("attachment_url") @db.VarChar(500)

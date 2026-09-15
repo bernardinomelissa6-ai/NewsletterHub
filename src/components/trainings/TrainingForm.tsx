@@ -106,17 +106,24 @@ export function TrainingForm({ collaborators, branches, defaultCollaboratorName,
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Ramo *</Label>
-            <Select onValueChange={(v) => setValue("branch", v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o ramo" />
-              </SelectTrigger>
-              <SelectContent>
-                {branches.map((b) => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {errors.branch && <p className="text-xs text-destructive">{errors.branch.message}</p>}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Área *</Label>
+              <Select onValueChange={(v) => setValue("branch", v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a área" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((b) => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {errors.branch && <p className="text-xs text-destructive">{errors.branch.message}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ramo">Ramo *</Label>
+              <Input id="ramo" placeholder="Ex: Automóvel, Vida, RC..." {...register("ramo")} />
+              {errors.ramo && <p className="text-xs text-destructive">{errors.ramo.message}</p>}
+            </div>
           </div>
 
           <div className="space-y-2">

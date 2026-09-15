@@ -23,6 +23,7 @@ interface Training {
   date: string;
   type: "TRAINING" | "COURSE" | "CONSULTANCY";
   branch: string;
+  ramo: string;
   quarter: number;
   year: number;
   attachment_url: string | null;
@@ -116,7 +117,7 @@ export function TrainingList({ initialData, userRole }: Props) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${config.color}`}>{config.label}</span>
-                        <span className="text-xs text-muted-foreground">{t.branch} • T{t.quarter}/{t.year}</span>
+                        <span className="text-xs text-muted-foreground">{t.branch} • {t.ramo} • T{t.quarter}/{t.year}</span>
                       </div>
                       <p className="font-medium truncate">{t.insured}</p>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">

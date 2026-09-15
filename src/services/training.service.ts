@@ -25,6 +25,7 @@ export async function createTraining(
     date: date.toISOString(),
     type: input.type,
     branch: input.branch,
+    ramo: input.ramo,
     collaborator_id: input.collaboratorId,
     submitted_by_id: submittedById,
     attachment_url: attachmentUrl ?? null,
@@ -37,7 +38,7 @@ export async function createTraining(
 
   if (error) throw error;
 
-  await createAuditLog({ userId: submittedById, userName: submittedByName, userRole: submittedByRole, action: "CREATE", entityType: "Training", entityId: training.id, newValue: { type: input.type, branch: input.branch, collaboratorId: input.collaboratorId }, ipAddress });
+  await createAuditLog({ userId: submittedById, userName: submittedByName, userRole: submittedByRole, action: "CREATE", entityType: "Training", entityId: training.id, newValue: { type: input.type, branch: input.branch, ramo: input.ramo, collaboratorId: input.collaboratorId }, ipAddress });
 
   return training;
 }
@@ -58,7 +59,7 @@ export async function getTrainings(filter: TrainingFilterInput, userId: string, 
 
   let query = supabaseAdmin
     .from("trainings")
-    .select("id, insured, date, type, branch, quarter, year, attachment_url, collaborator_id, collaborator:users!collaborator_id(id, name)", { count: "exact" })
+    .select("id, insured, date, type, branch, ramo, quarter, year, attachment_url, collaborator_id, collaborator:users!collaborator_id(id, name)", { count: "exact" })
     .order("created_at", { ascending: false })
     .range(from, to);
 

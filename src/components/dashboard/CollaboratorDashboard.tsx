@@ -22,7 +22,7 @@ interface Props {
 const MEDAL_CHART_COLORS = ["#9B59B6", "#F59E0B", "#94A3B8", "#EA580C"];
 
 export function CollaboratorDashboard({ data, userName, year }: Props) {
-  const { score, medals, compliments, trainings, ranking } = data;
+  const { medals, compliments, trainings } = data;
 
   const medalData = [
     { name: MEDAL_LABELS.SPECIAL, value: medals.SPECIAL, color: MEDAL_CHART_COLORS[0] },
@@ -49,20 +49,7 @@ export function CollaboratorDashboard({ data, userName, year }: Props) {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-50 to-white dark:from-purple-950 dark:to-card">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-3">
-              <Trophy className="w-5 h-5 text-purple-600" />
-              <span className="text-2xl font-bold text-purple-600">{score}</span>
-            </div>
-            <p className="text-sm font-medium">Pontuação Total</p>
-            {ranking && (
-              <p className="text-xs text-muted-foreground mt-1">#{ranking.position} de {ranking.total}</p>
-            )}
-          </CardContent>
-        </Card>
-
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="border-0 shadow-sm">
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-3">

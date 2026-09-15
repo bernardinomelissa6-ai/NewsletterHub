@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { QuarterMultiSelect } from "./QuarterMultiSelect";
-import { Building2 } from "lucide-react";
 import type { AreaScore } from "@/services/ranking.service";
 
 const YEARS = Array.from({ length: 3 }, (_, i) => new Date().getFullYear() - i);
@@ -32,6 +31,8 @@ export function AreaRankingTable({ initialData, currentYear, currentQuarter }: P
     setLoading(false);
   }
 
+  const hasAnyMedals = data.some((a) => a.totalMedals > 0);
+
   return (
     <div className="space-y-5">
       <Card className="border-0 shadow-sm">
@@ -46,15 +47,12 @@ export function AreaRankingTable({ initialData, currentYear, currentQuarter }: P
         </CardContent>
       </Card>
 
+      {/* Left blank when there are no compliments evaluated in this period */}
+      {(loading || hasAnyMedals) && (
       <Card className="border-0 shadow-sm">
         <CardContent className="p-0">
           {loading ? (
             <div className="py-12 text-center text-muted-foreground">Carregando...</div>
-          ) : data.length === 0 ? (
-            <div className="py-12 text-center text-muted-foreground">
-              <Building2 className="w-10 h-10 mx-auto mb-2 opacity-20" />
-              <p>Nenhum resultado para este período</p>
-            </div>
           ) : (
             <table className="w-full text-sm">
               <thead className="border-b">
@@ -91,6 +89,7 @@ export function AreaRankingTable({ initialData, currentYear, currentQuarter }: P
           )}
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }

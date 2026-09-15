@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { QuarterMultiSelect } from "./QuarterMultiSelect";
-import { Trophy } from "lucide-react";
 import type { CollaboratorScore } from "@/lib/utils/ranking";
 
 const YEARS = Array.from({ length: 3 }, (_, i) => new Date().getFullYear() - i);
@@ -37,8 +36,8 @@ export function CollaboratorRankingTable({ initialData, areas, currentYear, curr
     setLoading(false);
   }
 
+  const hasAnyMedals = data.some((c) => c.specialCount > 0 || c.goldCount > 0 || c.silverCount > 0 || c.bronzeCount > 0);
   const top3 = data.slice(0, 3);
-  const rest = data.slice(3);
 
   return (
     <div className="space-y-5">
@@ -65,7 +64,7 @@ export function CollaboratorRankingTable({ initialData, areas, currentYear, curr
       </Card>
 
       {/* Podium */}
-      {top3.length > 0 && (
+      {!loading && hasAnyMedals && top3.length > 0 && (
         <div className="grid grid-cols-3 gap-4">
           {top3.map((c, i) => (
             <Card key={c.userId} className={`border-0 shadow-sm text-center ${i === 0 ? "ring-2 ring-yellow-400" : ""}`}>
@@ -86,16 +85,12 @@ export function CollaboratorRankingTable({ initialData, areas, currentYear, curr
         </div>
       )}
 
-      {/* Full table */}
+      {/* Full table — left blank when there are no compliments evaluated in this period */}
+      {(loading || hasAnyMedals) && (
       <Card className="border-0 shadow-sm">
         <CardContent className="p-0">
           {loading ? (
             <div className="py-12 text-center text-muted-foreground">Carregando...</div>
-          ) : data.length === 0 ? (
-            <div className="py-12 text-center text-muted-foreground">
-              <Trophy className="w-10 h-10 mx-auto mb-2 opacity-20" />
-              <p>Nenhum resultado para este período</p>
-            </div>
           ) : (
             <table className="w-full text-sm">
               <thead className="border-b">
@@ -130,6 +125,7 @@ export function CollaboratorRankingTable({ initialData, areas, currentYear, curr
           )}
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }

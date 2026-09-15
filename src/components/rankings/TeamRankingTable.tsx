@@ -30,6 +30,7 @@ export function TeamRankingTable({ collaborators: initialData, initialYear, init
     setLoading(false);
   }
 
+  const hasAnyMedals = data.some((c) => c.specialCount > 0 || c.goldCount > 0 || c.silverCount > 0 || c.bronzeCount > 0);
   const top3 = data.slice(0, 3);
 
   const podiumOrder = top3.length === 3 ? [top3[1], top3[0], top3[2]] : top3;
@@ -56,14 +57,7 @@ export function TeamRankingTable({ collaborators: initialData, initialYear, init
 
       {loading ? (
         <div className="py-12 text-center text-muted-foreground">Carregando...</div>
-      ) : data.length === 0 ? (
-        <Card className="border-0 shadow-sm">
-          <CardContent className="py-16 text-center text-muted-foreground">
-            <p className="font-medium">Sem dados disponíveis</p>
-            <p className="text-sm mt-1">Ainda não há colaboradores avaliados na sua área neste período.</p>
-          </CardContent>
-        </Card>
-      ) : (
+      ) : !hasAnyMedals ? null : (
         <>
           {/* Podium */}
           {top3.length >= 1 && (

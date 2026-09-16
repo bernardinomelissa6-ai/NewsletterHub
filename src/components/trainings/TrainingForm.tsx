@@ -37,9 +37,32 @@ interface Props {
   currentUserName?: string;
 }
 
+async function uploadDirect(file: File, folder: string): Promise<{ url: string; name: string; type: string }> {
+  const presignRes = await fetch("/api/storage/presign", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ filename: file.name, contentType: file.type, fileSize: file.size, folder }),
+  });
+  if (!presignRes.ok) {
+    const err = await presignRes.json();
+    throw new Error(err.error ?? "Erro ao preparar upload");
+  }
+  const { signedUrl, publicUrl } = await presignRes.json();
+
+  const uploadRes = await fetch(signedUrl, {
+    method: "PUT",
+    body: file,
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+  });
+  if (!uploadRes.ok) throw new Error("Falha ao enviar arquivo");
+
+  return { url: publicUrl, name: file.name, type: file.type };
+}
+
 export function TrainingForm({ collaborators, branches, defaultCollaboratorName, currentUserName }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -60,9 +83,32 @@ export function TrainingForm({ collaborators, branches, defaultCollaboratorName,
   async function onSubmit(data: CreateTrainingInput) {
     setLoading(true);
     try {
+      let attachmentUrl: string | undefined;
+      let attachmentName: string | undefined;
+      let attachmentType: string | undefined;
+
+      if (file) {
+        setUploading(true);
+        try {
+          const uploaded = await uploadDirect(file, "trainings");
+          attachmentUrl = uploaded.url;
+          attachmentName = uploaded.name;
+          attachmentType = uploaded.type;
+        } catch (err: any) {
+          toast.error(err.message ?? "Erro ao enviar arquivo");
+          return;
+        } finally {
+          setUploading(false);
+        }
+      }
+
       const formData = new FormData();
       Object.entries(data).forEach(([k, v]) => formData.append(k, v));
-      if (file) formData.append("attachment", file);
+      if (attachmentUrl) {
+        formData.append("attachmentUrl", attachmentUrl);
+        formData.append("attachmentName", attachmentName ?? file!.name);
+        formData.append("attachmentType", attachmentType ?? file!.type);
+      }
 
       const res = await fetch("/api/trainings", { method: "POST", body: formData });
       const json = await res.json();
@@ -73,8 +119,11 @@ export function TrainingForm({ collaborators, branches, defaultCollaboratorName,
       router.refresh();
     } finally {
       setLoading(false);
+      setUploading(false);
     }
   }
+
+  const isWorking = loading || uploading;
 
   return (
     <Card className="border-0 shadow-sm">
@@ -170,7 +219,7 @@ export function TrainingForm({ collaborators, branches, defaultCollaboratorName,
                     <span>{file.name}</span>
                     <span className="text-muted-foreground">({(file.size / 1024 / 1024).toFixed(1)} MB)</span>
                   </div>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => setFile(null)}>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => setFile(null)} disabled={isWorking}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
@@ -181,11 +230,12 @@ export function TrainingForm({ collaborators, branches, defaultCollaboratorName,
                     Arraste o arquivo aqui ou{" "}
                     <span className="text-primary underline">clique para selecionar</span>
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">PDF, PPT, PPTX • Máx. 10MB</p>
+                  <p className="text-xs text-muted-foreground mt-1">PDF, PPT, PPTX • Máx. 1GB</p>
                   <input
                     type="file"
                     className="hidden"
                     accept=".pdf,.ppt,.pptx"
+                    disabled={isWorking}
                     onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                   />
                 </label>
@@ -194,11 +244,15 @@ export function TrainingForm({ collaborators, branches, defaultCollaboratorName,
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={() => router.back()} className="flex-1">
+            <Button type="button" variant="outline" onClick={() => router.back()} className="flex-1" disabled={isWorking}>
               Cancelar
             </Button>
-            <Button type="submit" className="flex-1" disabled={loading}>
-              {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Salvando...</> : "Registrar Treinamento"}
+            <Button type="submit" className="flex-1" disabled={isWorking}>
+              {uploading ? (
+                <><Upload className="w-4 h-4 animate-pulse" /> Enviando arquivo...</>
+              ) : loading ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Salvando...</>
+              ) : "Registrar Treinamento"}
             </Button>
           </div>
         </form>

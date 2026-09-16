@@ -148,7 +148,7 @@ model Compliment {
   status         ComplimentStatus @default(PENDENTE_APROVACAO)
   attachmentUrl  String?          @map("attachment_url") @db.VarChar(500)
   attachmentName String?          @map("attachment_name") @db.VarChar(255)
-  attachmentType String?          @map("attachment_type") @db.VarChar(50)
+  attachmentType String?          @map("attachment_type") @db.VarChar(255)
   quarter        Int              @default(1)
   year           Int
   createdAt      DateTime         @default(now()) @map("created_at")

@@ -23,7 +23,8 @@ async function getMyEvaluations(userId: string) {
   const { data: compliments } = await supabaseAdmin
     .from("compliments")
     .select("id, insured, branch, reason, received_at, quarter, year, status, attachment_url, collaborator_id")
-    .in("id", complimentIds);
+    .in("id", complimentIds)
+    .is("removed_at", null);
 
   if (!compliments || compliments.length === 0) return [];
 

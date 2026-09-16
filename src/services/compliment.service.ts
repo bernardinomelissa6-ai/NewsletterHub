@@ -100,6 +100,7 @@ export async function getComplimentById(id: string) {
     .from("compliments")
     .select("id, insured, received_at, branch, reason, claim_history, status, attachment_url, attachment_name, attachment_type, quarter, year, created_at, updated_at, collaborator_id, submitted_by_id")
     .eq("id", id)
+    .is("removed_at", null)
     .single();
   if (!c) return null;
 
@@ -199,6 +200,7 @@ export async function getCompliments(filter: ComplimentFilterInput, userId: stri
   let query = supabaseAdmin
     .from("compliments")
     .select(COMPLIMENT_LIST_SELECT, { count: "exact" })
+    .is("removed_at", null)
     .order("created_at", { ascending: false })
     .range(from, to);
 
@@ -232,6 +234,7 @@ export async function getPendingApprovals(managerId: string) {
     .from("compliments")
     .select(COMPLIMENT_SELECT)
     .eq("status", "PENDENTE_APROVACAO")
+    .is("removed_at", null)
     .or(`collaborator_id.in.(${idList}),submitted_by_id.in.(${idList})`)
     .order("created_at");
   return data ?? [];
@@ -247,6 +250,7 @@ export async function getPendingEvaluations(directorId: string) {
     .from("compliments")
     .select(COMPLIMENT_SELECT)
     .eq("status", "PENDENTE_AVALIACAO")
+    .is("removed_at", null)
     .order("created_at");
 
   const all = data ?? [];
@@ -327,6 +331,7 @@ export async function getPendingEvaluationsForCentralDirector(centralDirectorId:
     .from("compliments")
     .select("id, insured, received_at, branch, reason, claim_history, status, quarter, year, created_at, attachment_url, collaborator_id, submitted_by_id")
     .eq("status", "PENDENTE_AVALIACAO")
+    .is("removed_at", null)
     .order("created_at");
 
   if (!rawComplimentsAll || rawComplimentsAll.length === 0) return [];
@@ -579,4 +584,81 @@ export async function updateCompliment(
   }
 
   return updated;
+}
+
+// "Retirar" um elogio: some de todas as telas do sistema (listas, avaliação,
+// aprovação, rankings), mas fica preservado para auditoria e pode ser restaurado.
+export async function removeCompliment(
+  id: string,
+  adminId: string,
+  adminName: string,
+  adminRole: string,
+  ipAddress?: string
+) {
+  const { data: previous } = await supabaseAdmin.from("compliments").select("insured, removed_at").eq("id", id).single();
+  if (!previous) throw new Error("Elogio não encontrado");
+  if (previous.removed_at) throw new Error("Este elogio já foi retirado");
+
+  const now = new Date().toISOString();
+  const { error } = await supabaseAdmin
+    .from("compliments")
+    .update({ removed_at: now, removed_by_id: adminId, updated_at: now })
+    .eq("id", id);
+  if (error) throw error;
+
+  await createAuditLog({ userId: adminId, userName: adminName, userRole: adminRole, action: "DELETE", entityType: "Compliment", entityId: id, previousValue: { insured: previous.insured }, newValue: { removedAt: now }, ipAddress });
+}
+
+export async function restoreCompliment(
+  id: string,
+  adminId: string,
+  adminName: string,
+  adminRole: string,
+  ipAddress?: string
+) {
+  const { data: previous } = await supabaseAdmin.from("compliments").select("insured, removed_at").eq("id", id).single();
+  if (!previous) throw new Error("Elogio não encontrado");
+  if (!previous.removed_at) throw new Error("Este elogio não está retirado");
+
+  const { error } = await supabaseAdmin
+    .from("compliments")
+    .update({ removed_at: null, removed_by_id: null, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+
+  await createAuditLog({ userId: adminId, userName: adminName, userRole: adminRole, action: "UPDATE", entityType: "Compliment", entityId: id, previousValue: { removedAt: previous.removed_at }, newValue: { removedAt: null }, ipAddress });
+}
+
+export async function getRemovedCompliments() {
+  const { data: rows } = await supabaseAdmin
+    .from("compliments")
+    .select("id, insured, branch, received_at, quarter, year, status, removed_at, removed_by_id, collaborator_id")
+    .not("removed_at", "is", null)
+    .order("removed_at", { ascending: false });
+
+  const list = rows ?? [];
+  if (list.length === 0) return [];
+
+  const userIds = [...new Set([
+    ...list.map((c: any) => c.collaborator_id),
+    ...list.map((c: any) => c.removed_by_id),
+  ].filter(Boolean))];
+
+  const { data: users } = userIds.length > 0
+    ? await supabaseAdmin.from("users").select("id, name").in("id", userIds)
+    : { data: [] };
+  const userMap = new Map((users ?? []).map((u: any) => [u.id, u.name as string]));
+
+  return list.map((c: any) => ({
+    id: c.id,
+    insured: c.insured,
+    branch: c.branch,
+    receivedAt: c.received_at,
+    quarter: c.quarter,
+    year: c.year,
+    status: c.status,
+    removedAt: c.removed_at,
+    collaboratorName: userMap.get(c.collaborator_id) ?? "—",
+    removedByName: c.removed_by_id ? (userMap.get(c.removed_by_id) ?? "—") : "—",
+  }));
 }

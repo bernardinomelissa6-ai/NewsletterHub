@@ -14,6 +14,7 @@ const ROLE_ROUTES: Record<string, string[]> = {
   "/api/settings/medal-images": ["ADMIN"],
   "/compliments/pending-approval": ["MANAGER", "ADMIN", "DIRETOR_CENTRAL"],
   "/compliments/pending-evaluation": ["DIRECTOR", "ADMIN", "DIRETOR_CENTRAL"],
+  "/compliments/removidos": ["ADMIN"],
   "/minha-equipe": ["DIRECTOR", "DIRETOR_CENTRAL"],
   "/rankings/collaborators": ["MANAGER", "DIRECTOR", "ADMIN", "DIRETOR_CENTRAL"],
   "/rankings/areas": ["DIRECTOR", "ADMIN", "DIRETOR_CENTRAL"],

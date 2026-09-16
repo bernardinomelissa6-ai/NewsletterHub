@@ -11,6 +11,7 @@ async function getAdminPendingApprovals() {
     .from("compliments")
     .select("id, insured, received_at, branch, reason, claim_history, status, quarter, year, created_at, attachment_url, collaborator_id, submitted_by_id")
     .eq("status", "PENDENTE_APROVACAO")
+    .is("removed_at", null)
     .order("created_at");
 
   if (!rawCompliments || rawCompliments.length === 0) return [];

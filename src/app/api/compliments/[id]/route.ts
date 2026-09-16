@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
-import { getComplimentById, updateCompliment } from "@/services/compliment.service";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getComplimentById, updateCompliment, removeCompliment, restoreCompliment } from "@/services/compliment.service";
 import { uploadFile, ALLOWED_COMPLIMENT_TYPES } from "@/lib/storage/supabase-storage";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -62,6 +61,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
+// Retira o elogio de todas as telas do sistema (soft delete) — fica preservado
+// na página de "Itens Retirados" e pode ser restaurado.
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user || session.user.role !== "ADMIN") {
@@ -69,11 +70,34 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   }
 
   const { id } = await params;
+  const ipAddress = req.headers.get("x-forwarded-for") ?? undefined;
 
   try {
-    await supabaseAdmin.from("compliments").delete().eq("id", id);
-    return NextResponse.json({ message: "Excluído com sucesso" });
-  } catch {
-    return NextResponse.json({ error: "Erro ao excluir" }, { status: 500 });
+    await removeCompliment(id, session.user.id, session.user.name ?? "Desconhecido", session.user.role, ipAddress);
+    return NextResponse.json({ message: "Elogio retirado com sucesso" });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message ?? "Erro ao retirar" }, { status: 400 });
+  }
+}
+
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
+  }
+
+  const { id } = await params;
+  const body = await req.json().catch(() => ({}));
+  const ipAddress = req.headers.get("x-forwarded-for") ?? undefined;
+
+  if (body.action !== "restore") {
+    return NextResponse.json({ error: "Ação inválida" }, { status: 400 });
+  }
+
+  try {
+    await restoreCompliment(id, session.user.id, session.user.name ?? "Desconhecido", session.user.role, ipAddress);
+    return NextResponse.json({ message: "Elogio restaurado com sucesso" });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message ?? "Erro ao restaurar" }, { status: 400 });
   }
 }

@@ -4,7 +4,7 @@ import { getUserScore, getCollaboratorRanking, getAreaRanking } from "./ranking.
 export async function getCollaboratorDashboard(userId: string, year: number, quarter?: number) {
   const [scoreData, complimentsData, trainingsData, rankingData] = await Promise.all([
     getUserScore(userId, { year, quarter }),
-    supabaseAdmin.from("compliments").select("status").or(`collaborator_id.eq.${userId},submitted_by_id.eq.${userId}`).eq("year", year),
+    supabaseAdmin.from("compliments").select("status").or(`collaborator_id.eq.${userId},submitted_by_id.eq.${userId}`).eq("year", year).is("removed_at", null),
     supabaseAdmin.from("trainings").select("type").eq("collaborator_id", userId).eq("year", year),
     getCollaboratorRanking({ year, quarters: quarter ? [quarter] : undefined }),
   ]);
@@ -37,7 +37,7 @@ export async function getManagerDashboard(managerId: string) {
   const collaboratorIds = (colls ?? []).map((u: any) => u.id);
   if (collaboratorIds.length === 0) return { pendingApproval: 0, totalCompliments: 0, approved: 0, rejected: 0, evaluated: 0 };
 
-  const { data: compliments } = await supabaseAdmin.from("compliments").select("status").in("collaborator_id", collaboratorIds);
+  const { data: compliments } = await supabaseAdmin.from("compliments").select("status").in("collaborator_id", collaboratorIds).is("removed_at", null);
   const all = compliments ?? [];
   const statusMap: Record<string, number> = {};
   for (const c of all) statusMap[c.status] = (statusMap[c.status] ?? 0) + 1;
@@ -54,7 +54,7 @@ export async function getManagerDashboard(managerId: string) {
 export async function getDirectorDashboard(directorId: string) {
   // Busca todos os elogios do sistema (um diretor pode avaliar qualquer elogio pendente)
   const [complimentsRes, myEvalsRes] = await Promise.all([
-    supabaseAdmin.from("compliments").select("id, status"),
+    supabaseAdmin.from("compliments").select("id, status").is("removed_at", null),
     supabaseAdmin.from("compliment_evaluations").select("compliment_id").eq("director_id", directorId),
   ]);
 
@@ -80,7 +80,7 @@ export async function getAdminDashboard() {
   const [usersRes, areasRes, complaintsRes, trainingsRes, medalsRes, byRoleRes, topColls, topAreas] = await Promise.all([
     supabaseAdmin.from("users").select("*", { count: "exact", head: true }).eq("is_active", true),
     supabaseAdmin.from("areas").select("*", { count: "exact", head: true }).eq("is_active", true),
-    supabaseAdmin.from("compliments").select("status"),
+    supabaseAdmin.from("compliments").select("status").is("removed_at", null),
     supabaseAdmin.from("trainings").select("*", { count: "exact", head: true }),
     supabaseAdmin.from("compliment_evaluations").select("*", { count: "exact", head: true }),
     supabaseAdmin.from("users").select("role").eq("is_active", true),

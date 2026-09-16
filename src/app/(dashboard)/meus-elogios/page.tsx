@@ -14,6 +14,7 @@ async function getMyCompliments(userId: string) {
     .from("compliments")
     .select("id, insured, branch, reason, received_at, quarter, year, status, attachment_url, created_at")
     .or(`collaborator_id.eq.${userId},submitted_by_id.eq.${userId}`)
+    .is("removed_at", null)
     .order("created_at", { ascending: false });
 
   if (!rawCompliments || rawCompliments.length === 0) return [];

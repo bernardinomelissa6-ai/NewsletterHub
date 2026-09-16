@@ -43,6 +43,7 @@ async function getAdminPendingEvaluations(excludeDirectorId?: string) {
     .from("compliments")
     .select("id, insured, received_at, branch, reason, claim_history, status, quarter, year, created_at, attachment_url, collaborator_id, submitted_by_id")
     .eq("status", "PENDENTE_AVALIACAO")
+    .is("removed_at", null)
     .order("created_at");
 
   if (!rawCompliments || rawCompliments.length === 0) return [];

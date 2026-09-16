@@ -151,6 +151,8 @@ model Compliment {
   attachmentType String?          @map("attachment_type") @db.VarChar(255)
   quarter        Int              @default(1)
   year           Int
+  removedAt      DateTime?        @map("removed_at")
+  removedById    String?          @map("removed_by_id")
   createdAt      DateTime         @default(now()) @map("created_at")
   updatedAt      DateTime         @updatedAt @map("updated_at")
 
@@ -166,6 +168,7 @@ model Compliment {
   @@index([status])
   @@index([year, quarter])
   @@index([createdAt])
+  @@index([removedAt])
   @@map("compliments")
 }
 

@@ -98,10 +98,10 @@ export function ComplimentDetail({ compliment: c, userRole, userId }: Props) {
       const res = await fetch(`/api/compliments/${c.id}`, { method: "DELETE" });
       if (!res.ok) {
         const json = await res.json();
-        toast.error(json.error ?? "Erro ao excluir");
+        toast.error(json.error ?? "Erro ao retirar");
         return;
       }
-      toast.success("Elogio excluído com sucesso");
+      toast.success("Elogio retirado com sucesso");
       router.push("/compliments");
       router.refresh();
     } finally {
@@ -151,7 +151,7 @@ export function ComplimentDetail({ compliment: c, userRole, userId }: Props) {
           )}
           {isAdmin && (
             <Button size="sm" variant="destructive" onClick={() => setConfirmDelete(true)}>
-              <Trash2 className="w-4 h-4" /> Excluir
+              <Trash2 className="w-4 h-4" /> Retirar
             </Button>
           )}
         </div>
@@ -312,17 +312,17 @@ export function ComplimentDetail({ compliment: c, userRole, userId }: Props) {
       <Dialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Excluir elogio</DialogTitle>
+            <DialogTitle>Retirar elogio</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Tem certeza que deseja excluir o elogio de <span className="font-semibold text-foreground">{c.insured}</span>? Esta ação não pode ser desfeita.
+            Tem certeza que deseja retirar o elogio de <span className="font-semibold text-foreground">{c.insured}</span>? Ele será removido de todas as listas, rankings e avaliações, mas poderá ser restaurado depois na página de Itens Retirados.
           </p>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setConfirmDelete(false)} disabled={deleting}>
               Cancelar
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting ? "Excluindo..." : "Excluir"}
+              {deleting ? "Retirando..." : "Retirar"}
             </Button>
           </DialogFooter>
         </DialogContent>

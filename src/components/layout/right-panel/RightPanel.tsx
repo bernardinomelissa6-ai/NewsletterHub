@@ -12,11 +12,13 @@ async function getRecentData() {
       .from("compliments")
       .select("id, insured, updated_at, collaborator:users!compliments_collaborator_id_fkey(name), evaluations:compliment_evaluations(medal)")
       .eq("status", "AVALIADO")
+      .is("removed_at", null)
       .order("updated_at", { ascending: false })
       .limit(5),
     supabaseAdmin
       .from("compliment_evaluations")
-      .select("id, medal, compliment:compliments!compliment_evaluations_compliment_id_fkey(insured, collaborator:users!compliments_collaborator_id_fkey(name))")
+      .select("id, medal, compliment:compliments!compliment_evaluations_compliment_id_fkey!inner(insured, removed_at, collaborator:users!compliments_collaborator_id_fkey(name))")
+      .is("compliment.removed_at", null)
       .order("created_at", { ascending: false })
       .limit(3),
   ]);

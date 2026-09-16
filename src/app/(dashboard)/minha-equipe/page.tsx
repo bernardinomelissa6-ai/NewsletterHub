@@ -29,6 +29,7 @@ async function getMyTeamEvaluatedCompliments(directorId: string) {
     .select("id, insured, branch, reason, claim_history, received_at, quarter, year, status, attachment_url, collaborator_id")
     .in("collaborator_id", collaboratorIds)
     .eq("status", "AVALIADO")
+    .is("removed_at", null)
     .order("received_at", { ascending: false });
 
   if (!rawCompliments || rawCompliments.length === 0) {

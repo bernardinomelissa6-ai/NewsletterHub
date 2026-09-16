@@ -86,10 +86,10 @@ export function ComplimentList({ initialData, userRole, userId }: Props) {
       const res = await fetch(`/api/compliments/${toDelete.id}`, { method: "DELETE" });
       if (!res.ok) {
         const json = await res.json();
-        toast.error(json.error ?? "Erro ao excluir");
+        toast.error(json.error ?? "Erro ao retirar");
         return;
       }
-      toast.success("Elogio excluído com sucesso");
+      toast.success("Elogio retirado com sucesso");
       setToDelete(null);
       fetchData(page);
       router.refresh();
@@ -226,17 +226,17 @@ export function ComplimentList({ initialData, userRole, userId }: Props) {
       <Dialog open={!!toDelete} onOpenChange={(open) => !open && setToDelete(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Excluir elogio</DialogTitle>
+            <DialogTitle>Retirar elogio</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Tem certeza que deseja excluir o elogio de <span className="font-semibold text-foreground">{toDelete?.insured}</span>? Esta ação não pode ser desfeita.
+            Tem certeza que deseja retirar o elogio de <span className="font-semibold text-foreground">{toDelete?.insured}</span>? Ele será removido de todas as listas, rankings e avaliações, mas poderá ser restaurado depois na página de Itens Retirados.
           </p>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setToDelete(null)} disabled={deleting}>
               Cancelar
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
-              {deleting ? "Excluindo..." : "Excluir"}
+              {deleting ? "Retirando..." : "Retirar"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -37,6 +37,7 @@ export async function getCollaboratorRanking(filter: RankingFilter = {}): Promis
     .from("compliments")
     .select("id, collaborator_id")
     .eq("status", "AVALIADO")
+    .is("removed_at", null)
     .in("collaborator_id", userIds);
   if (year) complimentsQuery = complimentsQuery.eq("year", year);
   if (quarters && quarters.length > 0) complimentsQuery = complimentsQuery.in("quarter", quarters);
@@ -185,6 +186,7 @@ export async function getUserScore(userId: string, filter: { year?: number; quar
     .from("compliments")
     .select("id")
     .eq("status", "AVALIADO")
+    .is("removed_at", null)
     .or(`collaborator_id.eq.${userId},submitted_by_id.eq.${userId}`);
 
   if (year) query = query.eq("year", year);

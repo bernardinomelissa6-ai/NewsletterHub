@@ -94,7 +94,7 @@ async function getMyTeamEvaluatedCompliments(directorId: string) {
 }
 
 export default async function MinhaEquipePage() {
-  const session = await requireRole("DIRECTOR", "DIRETOR_CENTRAL");
+  const session = await requireRole("DIRECTOR");
   const { compliments, areaNames } = await getMyTeamEvaluatedCompliments(session.user.id);
 
   return (

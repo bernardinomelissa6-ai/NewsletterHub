@@ -2,14 +2,16 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, Search, Filter, Star, Paperclip } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Eye, Search, Filter, Star, Paperclip, Trash2 } from "lucide-react";
 import { MEDAL_LABELS, MEDAL_COLORS } from "@/lib/utils/ranking";
 import type { MedalType, ComplimentStatus } from "@/lib/supabase/types";
 
@@ -43,12 +45,17 @@ interface Props {
 }
 
 export function ComplimentList({ initialData, userRole, userId }: Props) {
+  const router = useRouter();
   const [data, setData] = useState(initialData.data);
   const [total, setTotal] = useState(initialData.total);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [toDelete, setToDelete] = useState<Compliment | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const isAdmin = userRole === "ADMIN";
 
   const fetchData = useCallback(async (newPage = 1, newSearch = search, newStatus = statusFilter) => {
     setLoading(true);
@@ -71,6 +78,25 @@ export function ComplimentList({ initialData, userRole, userId }: Props) {
     e.preventDefault();
     fetchData(1, search, statusFilter);
   };
+
+  async function handleDelete() {
+    if (!toDelete) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/compliments/${toDelete.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const json = await res.json();
+        toast.error(json.error ?? "Erro ao excluir");
+        return;
+      }
+      toast.success("Elogio excluído com sucesso");
+      setToDelete(null);
+      fetchData(page);
+      router.refresh();
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -165,11 +191,18 @@ export function ComplimentList({ initialData, userRole, userId }: Props) {
                         )}
                       </div>
                     </div>
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/compliments/${c.id}`}>
-                        <Eye className="w-4 h-4" />
-                      </Link>
-                    </Button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link href={`/compliments/${c.id}`}>
+                          <Eye className="w-4 h-4" />
+                        </Link>
+                      </Button>
+                      {isAdmin && (
+                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => setToDelete(c)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -188,6 +221,26 @@ export function ComplimentList({ initialData, userRole, userId }: Props) {
           <Button variant="outline" size="sm" onClick={() => fetchData(page + 1)} disabled={page >= Math.ceil(total / 20)}>Próxima</Button>
         </div>
       )}
+
+      {/* Confirm delete dialog */}
+      <Dialog open={!!toDelete} onOpenChange={(open) => !open && setToDelete(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Excluir elogio</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Tem certeza que deseja excluir o elogio de <span className="font-semibold text-foreground">{toDelete?.insured}</span>? Esta ação não pode ser desfeita.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setToDelete(null)} disabled={deleting}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? "Excluindo..." : "Excluir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

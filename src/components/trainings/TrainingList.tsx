@@ -2,14 +2,16 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BookOpen, GraduationCap, Users, Search, Paperclip } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { BookOpen, GraduationCap, Users, Search, Paperclip, Trash2 } from "lucide-react";
 
 const TYPE_CONFIG = {
   TRAINING: { label: "Treinamento", icon: BookOpen, color: "bg-blue-100 text-blue-800" },
@@ -36,12 +38,17 @@ interface Props {
 }
 
 export function TrainingList({ initialData, userRole }: Props) {
+  const router = useRouter();
   const [data, setData] = useState(initialData.data);
   const [total, setTotal] = useState(initialData.total);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [loading, setLoading] = useState(false);
+  const [toDelete, setToDelete] = useState<Training | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const isAdmin = userRole === "ADMIN";
 
   const fetchData = useCallback(async (newPage = 1, newSearch = search, newType = typeFilter) => {
     setLoading(true);
@@ -59,6 +66,25 @@ export function TrainingList({ initialData, userRole }: Props) {
       setLoading(false);
     }
   }, [search, typeFilter]);
+
+  async function handleDelete() {
+    if (!toDelete) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/trainings/${toDelete.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const json = await res.json();
+        toast.error(json.error ?? "Erro ao excluir");
+        return;
+      }
+      toast.success("Registro excluído com sucesso");
+      setToDelete(null);
+      fetchData(page);
+      router.refresh();
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -127,6 +153,11 @@ export function TrainingList({ initialData, userRole }: Props) {
                         {t.attachment_url && <span className="flex items-center gap-1"><Paperclip className="w-3 h-3" /> Anexo</span>}
                       </div>
                     </div>
+                    {isAdmin && (
+                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive shrink-0" onClick={() => setToDelete(t)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -134,6 +165,26 @@ export function TrainingList({ initialData, userRole }: Props) {
           })}
         </div>
       )}
+
+      {/* Confirm delete dialog */}
+      <Dialog open={!!toDelete} onOpenChange={(open) => !open && setToDelete(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Excluir registro</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Tem certeza que deseja excluir o registro de <span className="font-semibold text-foreground">{toDelete?.insured}</span>? Esta ação não pode ser desfeita.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setToDelete(null)} disabled={deleting}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting ? "Excluindo..." : "Excluir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

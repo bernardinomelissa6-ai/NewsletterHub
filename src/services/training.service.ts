@@ -70,11 +70,16 @@ export async function getTrainings(filter: TrainingFilterInput, userId: string, 
     const areaIds = (areas ?? []).map((a: any) => a.id);
     if (areaIds.length === 0) return { data: [], total: 0, page, limit, totalPages: 0 };
     query = query.in("collaborator_id", await getCollaboratorIds(areaIds));
+  } else if (userRole === "DIRECTOR") {
+    const { data: areas } = await supabaseAdmin.from("areas").select("id").eq("director_id", userId);
+    const areaIds = (areas ?? []).map((a: any) => a.id);
+    if (areaIds.length === 0) return { data: [], total: 0, page, limit, totalPages: 0 };
+    query = query.in("collaborator_id", await getCollaboratorIds(areaIds));
   }
 
   if (type) query = query.eq("type", type);
   if (collaboratorId && userRole !== "COLLABORATOR") query = query.eq("collaborator_id", collaboratorId);
-  if (areaId && userRole !== "COLLABORATOR" && userRole !== "MANAGER") {
+  if (areaId && !["COLLABORATOR", "MANAGER", "DIRECTOR"].includes(userRole)) {
     const ids = await getCollaboratorIds([areaId]);
     query = query.in("collaborator_id", ids);
   }

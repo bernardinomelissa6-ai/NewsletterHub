@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth.schema";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
@@ -50,7 +50,6 @@ function LoginForm() {
     <Card className="border-0 shadow-lg">
       <CardHeader className="space-y-1 pb-4">
         <CardTitle className="text-2xl font-bold">Bem-vindo de volta</CardTitle>
-        <CardDescription>Entre com suas credenciais corporativas</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">

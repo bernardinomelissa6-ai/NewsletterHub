@@ -13,14 +13,14 @@ export default async function NewTrainingPage() {
 
   let collaborators: any[] = [];
   if (role === "ADMIN" || role === "DIRETOR_CENTRAL") {
-    const { data } = await supabaseAdmin.from("users").select("id, name, area:areas(name)").eq("is_active", true).eq("role", "COLLABORATOR").order("name");
+    const { data } = await supabaseAdmin.from("users").select("id, name, area:areas!users_area_id_fkey(name)").eq("is_active", true).eq("role", "COLLABORATOR").order("name");
     collaborators = data ?? [];
   } else if (role === "MANAGER") {
     const areaIds = await getManagerAreaIds(userId);
-    const { data } = await supabaseAdmin.from("users").select("id, name, area:areas(name)").eq("is_active", true).eq("role", "COLLABORATOR").in("area_id", areaIds).order("name");
+    const { data } = await supabaseAdmin.from("users").select("id, name, area:areas!users_area_id_fkey(name)").eq("is_active", true).eq("role", "COLLABORATOR").in("area_id", areaIds).order("name");
     collaborators = data ?? [];
   } else {
-    const { data } = await supabaseAdmin.from("users").select("id, name, area:areas(name)").eq("id", userId);
+    const { data } = await supabaseAdmin.from("users").select("id, name, area:areas!users_area_id_fkey(name)").eq("id", userId);
     collaborators = data ?? [];
   }
 

@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
 
   let tQuery = supabaseAdmin
     .from("trainings")
-    .select("*, collaborator:users!trainings_collaborator_id_fkey(name, area:areas(name))")
+    .select("*, collaborator:users!trainings_collaborator_id_fkey(name, area:areas!users_area_id_fkey(name))")
     .order("date", { ascending: false });
 
   if (year) tQuery = tQuery.eq("year", year);

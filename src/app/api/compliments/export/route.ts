@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabaseAdmin
     .from("compliments")
-    .select("*, collaborator:users!compliments_collaborator_id_fkey(name, area:areas(name)), evaluations:compliment_evaluations(medal)")
+    .select("*, collaborator:users!compliments_collaborator_id_fkey(name, area:areas!users_area_id_fkey(name)), evaluations:compliment_evaluations(medal)")
     .is("removed_at", null)
     .order("created_at", { ascending: false });
 

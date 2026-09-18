@@ -70,7 +70,7 @@ export async function getUsers(filters: { role?: string; areaId?: string; search
 
   let query = supabaseAdmin
     .from("users")
-    .select("id, name, email, role, is_active, email_verified, created_at, area:areas(id, name)", { count: "exact" })
+    .select("id, name, email, role, is_active, email_verified, created_at, area:areas!users_area_id_fkey(id, name)", { count: "exact" })
     .order("name")
     .range(from, to);
 
@@ -86,7 +86,7 @@ export async function getUsers(filters: { role?: string; areaId?: string; search
 }
 
 export async function getUserById(id: string) {
-  const { data } = await supabaseAdmin.from("users").select("id, name, email, role, is_active, email_verified, area_id, created_at, area:areas(id, name)").eq("id", id).single();
+  const { data } = await supabaseAdmin.from("users").select("id, name, email, role, is_active, email_verified, area_id, created_at, area:areas!users_area_id_fkey(id, name)").eq("id", id).single();
   return data;
 }
 

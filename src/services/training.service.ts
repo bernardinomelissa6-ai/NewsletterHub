@@ -47,7 +47,7 @@ export async function createTraining(
 export async function getTrainingById(id: string) {
   const { data } = await supabaseAdmin
     .from("trainings")
-    .select("*, collaborator:users!trainings_collaborator_id_fkey(*, area:areas(id, name)), submitted_by:users!trainings_submitted_by_id_fkey(id, name)")
+    .select("*, collaborator:users!trainings_collaborator_id_fkey(*, area:areas!users_area_id_fkey(id, name)), submitted_by:users!trainings_submitted_by_id_fkey(id, name)")
     .eq("id", id)
     .single();
   return data;

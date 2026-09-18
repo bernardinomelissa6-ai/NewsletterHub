@@ -37,7 +37,7 @@ const COMPLIMENT_SELECT = `
   quarter, year, created_at, updated_at,
   collaborator:users!collaborator_id(
     id, name, email, area_id,
-    area:areas(id, name)
+    area:areas!users_area_id_fkey(id, name)
   ),
   submitted_by:users!submitted_by_id(id, name),
   approvals:compliment_approvals(

@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { MEDAL_POINTS, sortCollaborators, type CollaboratorScore } from "@/lib/utils/ranking";
 import { calculateFinalMedal } from "@/lib/utils/medal-calculation";
+import { getManagerAreaIds } from "./area.service";
 import type { MedalType } from "@/lib/supabase/types";
 
 export interface RankingFilter {
@@ -173,8 +174,7 @@ export async function getAreaRanking(filter: RankingFilter = {}): Promise<AreaSc
 }
 
 export async function getTeamRanking(managerId: string, filter: RankingFilter = {}): Promise<CollaboratorScore[]> {
-  const { data: areas } = await supabaseAdmin.from("areas").select("id").eq("manager_id", managerId);
-  const areaIds = (areas ?? []).map((a) => a.id);
+  const areaIds = await getManagerAreaIds(managerId);
   const collaborators = await getCollaboratorRanking({ ...filter });
   return collaborators.filter((c) => c.areaId && areaIds.includes(c.areaId));
 }

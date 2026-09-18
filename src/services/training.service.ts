@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createAuditLog } from "./audit.service";
+import { getManagerAreaIds } from "./area.service";
 import { getQuarterFromDateString, getYearFromDateString } from "@/lib/utils/quarters";
 import { randomUUID } from "crypto";
 import type { CreateTrainingInput, TrainingFilterInput } from "@/lib/validations/training.schema";
@@ -66,8 +67,7 @@ export async function getTrainings(filter: TrainingFilterInput, userId: string, 
   if (userRole === "COLLABORATOR") {
     query = query.eq("collaborator_id", userId);
   } else if (userRole === "MANAGER") {
-    const { data: areas } = await supabaseAdmin.from("areas").select("id").eq("manager_id", userId);
-    const areaIds = (areas ?? []).map((a: any) => a.id);
+    const areaIds = await getManagerAreaIds(userId);
     if (areaIds.length === 0) return { data: [], total: 0, page, limit, totalPages: 0 };
     query = query.in("collaborator_id", await getCollaboratorIds(areaIds));
   } else if (userRole === "DIRECTOR") {

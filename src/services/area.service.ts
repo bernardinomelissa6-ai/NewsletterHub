@@ -86,6 +86,22 @@ export async function getAreas(search?: string) {
   }));
 }
 
+// A gestor pode ser vinculado a uma área de duas formas independentes: pelo
+// campo "Gestor" no cadastro da área (areas.manager_id, um único gestor) ou
+// pela própria área do usuário (users.area_id) — usado quando várias pessoas
+// têm o papel de Gestor na mesma área. As duas contam para fins de permissão.
+export async function getManagerAreaIds(managerId: string): Promise<string[]> {
+  const [{ data: user }, { data: managedAreas }] = await Promise.all([
+    supabaseAdmin.from("users").select("area_id").eq("id", managerId).single(),
+    supabaseAdmin.from("areas").select("id").eq("manager_id", managerId),
+  ]);
+
+  const ids = new Set<string>();
+  if (user?.area_id) ids.add(user.area_id);
+  for (const a of managedAreas ?? []) ids.add(a.id);
+  return [...ids];
+}
+
 export async function getAreaById(id: string) {
   const { data: area, error } = await supabaseAdmin
     .from("areas")

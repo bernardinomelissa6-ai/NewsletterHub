@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getUserScore, getCollaboratorRanking, getAreaRanking } from "./ranking.service";
+import { getManagerAreaIds } from "./area.service";
 
 export async function getCollaboratorDashboard(userId: string, year: number, quarter?: number) {
   const [scoreData, complimentsData, trainingsData, rankingData] = await Promise.all([
@@ -29,8 +30,7 @@ export async function getCollaboratorDashboard(userId: string, year: number, qua
 }
 
 export async function getManagerDashboard(managerId: string) {
-  const { data: areas } = await supabaseAdmin.from("areas").select("id").eq("manager_id", managerId);
-  const areaIds = (areas ?? []).map((a: any) => a.id);
+  const areaIds = await getManagerAreaIds(managerId);
   if (areaIds.length === 0) return { pendingApproval: 0, totalCompliments: 0, approved: 0, rejected: 0, evaluated: 0 };
 
   const { data: colls } = await supabaseAdmin.from("users").select("id").in("area_id", areaIds);

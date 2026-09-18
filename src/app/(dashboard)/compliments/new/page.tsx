@@ -1,6 +1,7 @@
 import { requireAuth } from "@/lib/auth/session";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getBranches } from "@/services/branch.service";
+import { getManagerAreaIds } from "@/services/area.service";
 import { ComplimentForm } from "@/components/compliments/ComplimentForm";
 import type { Metadata } from "next";
 
@@ -19,8 +20,10 @@ export default async function NewComplimentPage() {
     const areaMap = new Map((areas ?? []).map((a) => [a.id, a.name]));
     collaborators = (users ?? []).map((u) => ({ id: u.id, name: u.name, area: u.area_id ? { name: areaMap.get(u.area_id) ?? "" } : null }));
   } else if (role === "MANAGER") {
-    const { data: managerAreas } = await supabaseAdmin.from("areas").select("id, name").eq("manager_id", userId);
-    const areaIds = (managerAreas ?? []).map((a) => a.id);
+    const areaIds = await getManagerAreaIds(userId);
+    const { data: managerAreas } = areaIds.length > 0
+      ? await supabaseAdmin.from("areas").select("id, name").in("id", areaIds)
+      : { data: [] };
     const areaMap = new Map((managerAreas ?? []).map((a) => [a.id, a.name]));
     const { data: users } = areaIds.length > 0
       ? await supabaseAdmin.from("users").select("id, name, area_id").eq("is_active", true).in("role", ["COLLABORATOR", "MANAGER"]).in("area_id", areaIds).order("name")

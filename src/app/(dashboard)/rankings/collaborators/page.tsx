@@ -1,5 +1,6 @@
 import { requireAuth } from "@/lib/auth/session";
 import { getCollaboratorRanking } from "@/services/ranking.service";
+import { getManagerAreaIds } from "@/services/area.service";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { CollaboratorRankingTable } from "@/components/rankings/CollaboratorRankingTable";
 import type { Metadata } from "next";
@@ -17,8 +18,8 @@ export default async function CollaboratorsRankingPage() {
   const filter: { year: number; quarters: number[]; areaId?: string } = { year: currentYear, quarters: [currentQuarter] };
 
   if (role === "MANAGER") {
-    const { data: areas } = await supabaseAdmin.from("areas").select("id").eq("manager_id", userId);
-    if (areas && areas.length > 0) filter.areaId = areas[0].id;
+    const areaIds = await getManagerAreaIds(userId);
+    if (areaIds.length > 0) filter.areaId = areaIds[0];
   }
 
   const ranking = await getCollaboratorRanking(filter);

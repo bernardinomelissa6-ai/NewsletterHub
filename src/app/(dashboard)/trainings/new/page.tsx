@@ -1,6 +1,7 @@
 import { requireAuth } from "@/lib/auth/session";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getBranches } from "@/services/branch.service";
+import { getManagerAreaIds } from "@/services/area.service";
 import { TrainingForm } from "@/components/trainings/TrainingForm";
 import type { Metadata } from "next";
 
@@ -15,8 +16,7 @@ export default async function NewTrainingPage() {
     const { data } = await supabaseAdmin.from("users").select("id, name, area:areas(name)").eq("is_active", true).eq("role", "COLLABORATOR").order("name");
     collaborators = data ?? [];
   } else if (role === "MANAGER") {
-    const { data: areas } = await supabaseAdmin.from("areas").select("id").eq("manager_id", userId);
-    const areaIds = (areas ?? []).map((a) => a.id);
+    const areaIds = await getManagerAreaIds(userId);
     const { data } = await supabaseAdmin.from("users").select("id, name, area:areas(name)").eq("is_active", true).eq("role", "COLLABORATOR").in("area_id", areaIds).order("name");
     collaborators = data ?? [];
   } else {

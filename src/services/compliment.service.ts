@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createAuditLog } from "./audit.service";
+import { getManagerAreaIds } from "./area.service";
 import {
   notifyComplimentApproved,
   notifyComplimentRejected,
@@ -187,8 +188,8 @@ export async function getCompliments(filter: ComplimentFilterInput, userId: stri
   if (userRole === "COLLABORATOR") {
     collaboratorFilter = [userId];
   } else if (userRole === "MANAGER") {
-    const { data: areas } = await supabaseAdmin.from("areas").select("id").eq("manager_id", userId);
-    const areaIds = (areas ?? []).map((a: any) => a.id);
+    const areaIds = await getManagerAreaIds(userId);
+    if (areaIds.length === 0) return { data: [], total: 0, page, limit, totalPages: 0 };
     const { data: colls } = await supabaseAdmin.from("users").select("id").in("area_id", areaIds);
     collaboratorFilter = (colls ?? []).map((u: any) => u.id);
     if (collaboratorFilter.length === 0) return { data: [], total: 0, page, limit, totalPages: 0 };
@@ -223,8 +224,8 @@ export async function getCompliments(filter: ComplimentFilterInput, userId: stri
 }
 
 export async function getPendingApprovals(managerId: string) {
-  const { data: areas } = await supabaseAdmin.from("areas").select("id").eq("manager_id", managerId);
-  const areaIds = (areas ?? []).map((a: any) => a.id);
+  const areaIds = await getManagerAreaIds(managerId);
+  if (areaIds.length === 0) return [];
   const { data: colls } = await supabaseAdmin.from("users").select("id").in("area_id", areaIds);
   const collaboratorIds = (colls ?? []).map((u: any) => u.id);
   if (collaboratorIds.length === 0) return [];

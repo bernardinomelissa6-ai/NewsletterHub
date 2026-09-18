@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Building2, Star, BookOpen, Trophy, Medal } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { ROLE_LABELS } from "@/lib/utils/permissions";
-import { MEDAL_LABELS } from "@/lib/utils/ranking";
+import { MEDAL_LABELS, computeRanks } from "@/lib/utils/ranking";
 import type { Role } from "@/lib/supabase/types";
 
 interface Props {
@@ -37,6 +37,9 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export function AdminDashboard({ data }: Props) {
+  const collaboratorRanks = computeRanks(data.topCollaborators);
+  const areaRanks = computeRanks(data.topAreas);
+
   const statusChartData = Object.entries(data.compliments.byStatus).map(([status, count]) => ({
     name: STATUS_LABELS[status] ?? status,
     value: count,
@@ -137,7 +140,7 @@ export function AdminDashboard({ data }: Props) {
           <CardContent className="space-y-3">
             {data.topCollaborators.map((c, i) => (
               <div key={c.userId} className="flex items-center gap-3">
-                <span className="text-lg font-bold text-muted-foreground w-6">#{i + 1}</span>
+                <span className="text-lg font-bold text-muted-foreground w-6">#{collaboratorRanks[i]}</span>
                 <div className="flex-1">
                   <p className="text-sm font-medium">{c.name}</p>
                 </div>
@@ -166,7 +169,7 @@ export function AdminDashboard({ data }: Props) {
           <CardContent className="space-y-3">
             {data.topAreas.map((a, i) => (
               <div key={a.areaId} className="flex items-center gap-3">
-                <span className="text-lg font-bold text-muted-foreground w-6">#{i + 1}</span>
+                <span className="text-lg font-bold text-muted-foreground w-6">#{areaRanks[i]}</span>
                 <div className="flex-1">
                   <p className="text-sm font-medium">{a.areaName}</p>
                   <p className="text-xs text-muted-foreground">{a.collaboratorCount} colaborador{a.collaboratorCount !== 1 ? "es" : ""}</p>

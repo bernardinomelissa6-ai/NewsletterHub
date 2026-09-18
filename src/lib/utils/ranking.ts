@@ -48,14 +48,44 @@ export interface CollaboratorScore {
 
 // Ranked by medal tier — like an Olympic medal table: most Especial wins,
 // ties broken by Ouro, then Prata, then Bronze. No abstract point score involved.
+// Collaborators with identical medal counts are true ties — the only remaining
+// comparison (name) is just for a stable, predictable display order, never a
+// tiebreaker implying one actually ranks above the other (see computeRanks).
 export function sortCollaborators(collaborators: CollaboratorScore[]): CollaboratorScore[] {
   return [...collaborators].sort((a, b) => {
     if (b.specialCount !== a.specialCount) return b.specialCount - a.specialCount;
     if (b.goldCount !== a.goldCount) return b.goldCount - a.goldCount;
     if (b.silverCount !== a.silverCount) return b.silverCount - a.silverCount;
     if (b.bronzeCount !== a.bronzeCount) return b.bronzeCount - a.bronzeCount;
-    if (b.totalCompliments !== a.totalCompliments) return b.totalCompliments - a.totalCompliments;
-    return b.totalTrainings - a.totalTrainings;
+    return a.name.localeCompare(b.name);
   });
+}
+
+interface MedalCounts {
+  specialCount: number;
+  goldCount: number;
+  silverCount: number;
+  bronzeCount: number;
+}
+
+// Standard competition ranking (1224): entries with the same medal counts
+// share the same position, and the next distinct entry skips accordingly
+// (1º, 1º, 3º — never 1º, 1º, 2º). `sorted` must already be sorted by medal tier.
+export function computeRanks<T extends MedalCounts>(sorted: T[]): number[] {
+  const ranks: number[] = [];
+  sorted.forEach((item, i) => {
+    if (i === 0) {
+      ranks.push(1);
+      return;
+    }
+    const prev = sorted[i - 1];
+    const tied =
+      item.specialCount === prev.specialCount &&
+      item.goldCount === prev.goldCount &&
+      item.silverCount === prev.silverCount &&
+      item.bronzeCount === prev.bronzeCount;
+    ranks.push(tied ? ranks[i - 1] : i + 1);
+  });
+  return ranks;
 }
 

@@ -168,7 +168,7 @@ export async function getAreaRanking(filter: RankingFilter = {}): Promise<AreaSc
     if (b.goldCount !== a.goldCount) return b.goldCount - a.goldCount;
     if (b.silverCount !== a.silverCount) return b.silverCount - a.silverCount;
     if (b.bronzeCount !== a.bronzeCount) return b.bronzeCount - a.bronzeCount;
-    return b.totalCompliments - a.totalCompliments;
+    return a.areaName.localeCompare(b.areaName);
   });
 }
 

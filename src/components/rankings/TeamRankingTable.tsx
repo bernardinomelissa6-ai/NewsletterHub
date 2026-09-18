@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { QuarterMultiSelect } from "./QuarterMultiSelect";
-import type { CollaboratorScore } from "@/lib/utils/ranking";
+import { computeRanks, type CollaboratorScore } from "@/lib/utils/ranking";
 
 const YEARS = Array.from({ length: 4 }, (_, i) => new Date().getFullYear() - i);
 
@@ -31,14 +31,18 @@ export function TeamRankingTable({ collaborators: initialData, initialYear, init
   }
 
   const hasAnyMedals = data.some((c) => c.specialCount > 0 || c.goldCount > 0 || c.silverCount > 0 || c.bronzeCount > 0);
+  const ranks = computeRanks(data);
   const top3 = data.slice(0, 3);
+  const top3Ranks = ranks.slice(0, 3);
 
-  const podiumOrder = top3.length === 3 ? [top3[1], top3[0], top3[2]] : top3;
-  const podiumHeights = ["h-20", "h-28", "h-16"];
-  const podiumRanks = ["2º", "1º", "3º"];
-  const podiumBg = ["bg-gray-100 dark:bg-gray-800", "bg-yellow-50 dark:bg-yellow-950", "bg-orange-50 dark:bg-orange-950"];
-  const podiumBorder = ["border-gray-300", "border-yellow-400", "border-orange-400"];
-  const podiumEmoji = ["🥈", "🥇", "🥉"];
+  // Styling keyed by actual rank (1º/2º/3º) — not array position — so ties
+  // (e.g. two people tied for 1º) render identically instead of one being
+  // mislabeled as 2º just because of where it sits in the sorted list.
+  const RANK_STYLE: Record<number, { height: string; bg: string; border: string; emoji: string }> = {
+    1: { height: "h-28", bg: "bg-yellow-50 dark:bg-yellow-950", border: "border-yellow-400", emoji: "🥇" },
+    2: { height: "h-20", bg: "bg-gray-100 dark:bg-gray-800", border: "border-gray-300", emoji: "🥈" },
+    3: { height: "h-16", bg: "bg-orange-50 dark:bg-orange-950", border: "border-orange-400", emoji: "🥉" },
+  };
 
   return (
     <div className="space-y-6">
@@ -67,17 +71,21 @@ export function TeamRankingTable({ collaborators: initialData, initialYear, init
               </CardHeader>
               <CardContent>
                 <div className="flex items-end justify-center gap-4">
-                  {podiumOrder.map((c, i) => (
-                    <div key={c.userId} className="flex flex-col items-center gap-2 flex-1 max-w-[150px]">
-                      <div className="text-2xl">{podiumEmoji[i]}</div>
-                      <div className="text-center">
-                        <p className="font-semibold text-sm leading-tight">{c.name}</p>
+                  {top3.map((c, i) => {
+                    const rank = top3Ranks[i];
+                    const style = RANK_STYLE[Math.min(rank, 3)];
+                    return (
+                      <div key={c.userId} className="flex flex-col items-center gap-2 flex-1 max-w-[150px]">
+                        <div className="text-2xl">{style.emoji}</div>
+                        <div className="text-center">
+                          <p className="font-semibold text-sm leading-tight">{c.name}</p>
+                        </div>
+                        <div className={`w-full rounded-t-lg border-2 ${style.bg} ${style.border} ${style.height} flex items-center justify-center`}>
+                          <span className="text-lg font-bold text-muted-foreground">{rank}º</span>
+                        </div>
                       </div>
-                      <div className={`w-full rounded-t-lg border-2 ${podiumBg[i]} ${podiumBorder[i]} ${podiumHeights[i]} flex items-center justify-center`}>
-                        <span className="text-lg font-bold text-muted-foreground">{podiumRanks[i]}</span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -103,10 +111,10 @@ export function TeamRankingTable({ collaborators: initialData, initialYear, init
                     {data.map((c, index) => (
                       <tr key={c.userId} className="hover:bg-muted/50 transition-colors">
                         <td className="p-4">
-                          {index < 3 ? (
-                            <span>{["🥇", "🥈", "🥉"][index]}</span>
+                          {ranks[index] <= 3 ? (
+                            <span>{["🥇", "🥈", "🥉"][ranks[index] - 1]}</span>
                           ) : (
-                            <span className="text-muted-foreground text-sm">{index + 1}º</span>
+                            <span className="text-muted-foreground text-sm">{ranks[index]}º</span>
                           )}
                         </td>
                         <td className="p-4">

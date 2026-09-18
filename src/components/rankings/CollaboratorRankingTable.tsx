@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { QuarterMultiSelect } from "./QuarterMultiSelect";
-import type { CollaboratorScore } from "@/lib/utils/ranking";
+import { computeRanks, type CollaboratorScore } from "@/lib/utils/ranking";
 
 const YEARS = Array.from({ length: 3 }, (_, i) => new Date().getFullYear() - i);
 const PODIUM_COLORS = ["text-yellow-500", "text-gray-400", "text-orange-500"];
@@ -37,7 +37,9 @@ export function CollaboratorRankingTable({ initialData, areas, currentYear, curr
   }
 
   const hasAnyMedals = data.some((c) => c.specialCount > 0 || c.goldCount > 0 || c.silverCount > 0 || c.bronzeCount > 0);
+  const ranks = computeRanks(data);
   const top3 = data.slice(0, 3);
+  const top3Ranks = ranks.slice(0, 3);
 
   return (
     <div className="space-y-5">
@@ -66,13 +68,16 @@ export function CollaboratorRankingTable({ initialData, areas, currentYear, curr
       {/* Podium */}
       {!loading && hasAnyMedals && top3.length > 0 && (
         <div className="grid grid-cols-3 gap-4">
-          {top3.map((c, i) => (
-            <Card key={c.userId} className={`border-0 shadow-sm text-center ${i === 0 ? "ring-2 ring-yellow-400" : ""}`}>
+          {top3.map((c, i) => {
+            const rank = top3Ranks[i];
+            const colorIdx = Math.min(rank, 3) - 1;
+            return (
+            <Card key={c.userId} className={`border-0 shadow-sm text-center ${rank === 1 ? "ring-2 ring-yellow-400" : ""}`}>
               <CardContent className="p-5">
-                <div className="text-3xl mb-2">{POSITION_BADGES[i]}</div>
+                <div className="text-3xl mb-2">{rank <= 3 ? POSITION_BADGES[rank - 1] : `${rank}°`}</div>
                 <p className="font-bold text-sm leading-tight">{c.name}</p>
                 {c.areaName && <p className="text-xs text-muted-foreground mt-0.5">{c.areaName}</p>}
-                <div className={`flex justify-center gap-2 mt-3 text-sm font-semibold ${PODIUM_COLORS[i]}`}>
+                <div className={`flex justify-center gap-2 mt-3 text-sm font-semibold ${PODIUM_COLORS[colorIdx]}`}>
                   {c.specialCount > 0 && <span>🏆 {c.specialCount}</span>}
                   {c.goldCount > 0 && <span>🥇 {c.goldCount}</span>}
                   {c.silverCount > 0 && <span>🥈 {c.silverCount}</span>}
@@ -81,7 +86,8 @@ export function CollaboratorRankingTable({ initialData, areas, currentYear, curr
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -105,7 +111,7 @@ export function CollaboratorRankingTable({ initialData, areas, currentYear, curr
                 {data.map((c, i) => (
                   <tr key={c.userId} className="border-b last:border-0 hover:bg-accent/50 transition-colors">
                     <td className="px-4 py-3 font-bold text-muted-foreground">
-                      {i < 3 ? POSITION_BADGES[i] : `${i + 1}°`}
+                      {ranks[i] <= 3 ? POSITION_BADGES[ranks[i] - 1] : `${ranks[i]}°`}
                     </td>
                     <td className="px-4 py-3 font-medium">{c.name}</td>
                     <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{c.areaName ?? "—"}</td>

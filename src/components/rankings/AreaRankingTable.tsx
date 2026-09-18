@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { QuarterMultiSelect } from "./QuarterMultiSelect";
+import { computeRanks } from "@/lib/utils/ranking";
 import type { AreaScore } from "@/services/ranking.service";
 
 const YEARS = Array.from({ length: 3 }, (_, i) => new Date().getFullYear() - i);
@@ -32,6 +33,7 @@ export function AreaRankingTable({ initialData, currentYear, currentQuarter }: P
   }
 
   const hasAnyMedals = data.some((a) => a.totalMedals > 0);
+  const ranks = computeRanks(data);
 
   return (
     <div className="space-y-5">
@@ -68,7 +70,7 @@ export function AreaRankingTable({ initialData, currentYear, currentQuarter }: P
                 {data.map((a, i) => (
                   <tr key={a.areaId} className="border-b last:border-0 hover:bg-accent/50 transition-colors">
                     <td className="px-4 py-3 font-bold text-muted-foreground">
-                      {i < 3 ? POSITION_BADGES[i] : `${i + 1}°`}
+                      {ranks[i] <= 3 ? POSITION_BADGES[ranks[i] - 1] : `${ranks[i]}°`}
                     </td>
                     <td className="px-4 py-3 font-medium">{a.areaName}</td>
                     <td className="px-4 py-3 text-center text-muted-foreground hidden md:table-cell">{a.collaboratorCount}</td>

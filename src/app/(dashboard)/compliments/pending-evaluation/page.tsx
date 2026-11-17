@@ -138,6 +138,8 @@ export default async function PendingEvaluationPage() {
   } else if (role === "DIRECTOR") {
     // Diretor não avalia elogios de colaboradores da própria área
     compliments = await getAdminPendingEvaluations(userId);
+    // Some da lista assim que este diretor avaliar, mesmo aguardando o 2º diretor/central
+    compliments = compliments.filter((c) => !(c.evaluations ?? []).some((e: any) => e.director_id === userId));
   } else {
     // ADMIN usa a mesma query manual (sem FK joins que podem falhar), sem restrição de área
     compliments = await getAdminPendingEvaluations();

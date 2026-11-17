@@ -52,13 +52,29 @@ export async function getManagerDashboard(managerId: string) {
 }
 
 export async function getDirectorDashboard(directorId: string) {
-  // Busca todos os elogios do sistema (um diretor pode avaliar qualquer elogio pendente)
-  const [complimentsRes, myEvalsRes] = await Promise.all([
-    supabaseAdmin.from("compliments").select("id, status").is("removed_at", null),
+  // Diretor não avalia/visualiza elogios da(s) própria(s) área(s)
+  const [complimentsRes, myEvalsRes, ownAreasRes] = await Promise.all([
+    supabaseAdmin.from("compliments").select("id, status, collaborator_id").is("removed_at", null),
     supabaseAdmin.from("compliment_evaluations").select("compliment_id").eq("director_id", directorId),
+    supabaseAdmin.from("areas").select("id").eq("director_id", directorId),
   ]);
 
-  const all = complimentsRes.data ?? [];
+  const allRaw = complimentsRes.data ?? [];
+  const excludedAreaIds = new Set((ownAreasRes.data ?? []).map((a: any) => a.id));
+
+  let all = allRaw;
+  if (excludedAreaIds.size > 0) {
+    const collaboratorIds = [...new Set(allRaw.map((c: any) => c.collaborator_id).filter(Boolean))];
+    const { data: collaborators } = collaboratorIds.length > 0
+      ? await supabaseAdmin.from("users").select("id, area_id").in("id", collaboratorIds)
+      : { data: [] };
+    const areaByCollaborator = new Map((collaborators ?? []).map((u: any) => [u.id, u.area_id]));
+    all = allRaw.filter((c: any) => {
+      const areaId = areaByCollaborator.get(c.collaborator_id);
+      return !areaId || !excludedAreaIds.has(areaId);
+    });
+  }
+
   const myEvaluatedIds = new Set((myEvalsRes.data ?? []).map((e: any) => e.compliment_id));
 
   const statusMap: Record<string, number> = {};

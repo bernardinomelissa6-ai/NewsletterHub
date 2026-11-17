@@ -191,7 +191,7 @@ model ComplimentApproval {
 
 model ComplimentEvaluation {
   id            String    @id @default(uuid())
-  complimentId  String    @unique @map("compliment_id")
+  complimentId  String    @map("compliment_id")
   directorId    String    @map("director_id")
   medal         MedalType
   justification String    @db.Text
@@ -202,6 +202,8 @@ model ComplimentEvaluation {
   compliment Compliment @relation(fields: [complimentId], references: [id], onDelete: Cascade)
   director   User       @relation(fields: [directorId], references: [id])
 
+  @@unique([complimentId, directorId])
+  @@index([complimentId])
   @@index([directorId])
   @@index([medal])
   @@map("compliment_evaluations")

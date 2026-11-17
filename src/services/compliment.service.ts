@@ -420,6 +420,17 @@ export async function evaluateCompliment(
   const { data: previous } = await supabaseAdmin.from("compliments").select("status, insured, collaborator_id").eq("id", id).single();
   if (!previous || previous.status !== "PENDENTE_AVALIACAO") throw new Error("Elogio não está pendente de avaliação");
 
+  {
+    const [{ data: collaborator }, { data: ownAreas }] = await Promise.all([
+      supabaseAdmin.from("users").select("area_id").eq("id", previous.collaborator_id).single(),
+      supabaseAdmin.from("areas").select("id").eq("director_id", directorId),
+    ]);
+    const ownAreaIds = new Set((ownAreas ?? []).map((a: any) => a.id));
+    if (collaborator?.area_id && ownAreaIds.has(collaborator.area_id)) {
+      throw new Error("Você não pode avaliar elogios da sua própria área");
+    }
+  }
+
   const { data: existingEvals } = await supabaseAdmin
     .from("compliment_evaluations")
     .select("director_id, medal")

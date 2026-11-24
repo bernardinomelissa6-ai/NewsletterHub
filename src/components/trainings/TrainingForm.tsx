@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { createTrainingSchema, type CreateTrainingInput } from "@/lib/validations/training.schema";
+import { ROLE_LABELS } from "@/lib/utils/permissions";
+import type { Role } from "@/lib/supabase/types";
 import { Loader2, Paperclip, Upload, X } from "lucide-react";
 
 const TYPES = [
@@ -22,6 +24,7 @@ const TYPES = [
 interface Collaborator {
   id: string;
   name: string;
+  role?: string;
   area?: { name: string } | null;
 }
 
@@ -33,8 +36,16 @@ interface Branch {
 interface Props {
   collaborators: Collaborator[];
   branches: Branch[];
-  defaultCollaboratorName?: string;
+  defaultCollaborator?: Collaborator;
   currentUserName?: string;
+}
+
+function personLabel(c: Collaborator) {
+  const details = [
+    c.role && c.role !== "COLLABORATOR" ? ROLE_LABELS[c.role as Role] : null,
+    c.area?.name,
+  ].filter(Boolean);
+  return details.length > 0 ? `${c.name} (${details.join(" • ")})` : c.name;
 }
 
 async function uploadDirect(file: File, folder: string): Promise<{ url: string; name: string; type: string }> {
@@ -59,7 +70,7 @@ async function uploadDirect(file: File, folder: string): Promise<{ url: string; 
   return { url: publicUrl, name: file.name, type: file.type };
 }
 
-export function TrainingForm({ collaborators, branches, defaultCollaboratorName, currentUserName }: Props) {
+export function TrainingForm({ collaborators, branches, defaultCollaborator, currentUserName }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -73,11 +84,15 @@ export function TrainingForm({ collaborators, branches, defaultCollaboratorName,
     if (dropped) setFile(dropped);
   }
 
-  const initialCollaboratorName = defaultCollaboratorName ?? collaborators[0]?.name ?? currentUserName ?? "";
+  // Na lista, o valor é o id (evita confundir pessoas com o mesmo nome); no campo
+  // de texto livre, é o nome digitado.
+  const initialCollaborator = collaborators.length > 1
+    ? defaultCollaborator?.id ?? ""
+    : defaultCollaborator?.name ?? currentUserName ?? "";
 
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<CreateTrainingInput>({
     resolver: zodResolver(createTrainingSchema),
-    defaultValues: { collaboratorId: initialCollaboratorName },
+    defaultValues: { collaboratorId: initialCollaborator },
   });
 
   async function onSubmit(data: CreateTrainingInput) {
@@ -176,19 +191,19 @@ export function TrainingForm({ collaborators, branches, defaultCollaboratorName,
           </div>
 
           <div className="space-y-2">
-            <Label>Colaborador *</Label>
+            <Label>Colaborador / Gestor / Diretor *</Label>
             {collaborators.length > 1 ? (
               <Select
                 onValueChange={(v) => setValue("collaboratorId", v)}
-                defaultValue={initialCollaboratorName}
+                defaultValue={initialCollaborator}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione o colaborador" />
+                  <SelectValue placeholder="Selecione a pessoa" />
                 </SelectTrigger>
                 <SelectContent>
                   {collaborators.map((c) => (
-                    <SelectItem key={c.id} value={c.name}>
-                      {c.name} {c.area ? `(${c.area.name})` : ""}
+                    <SelectItem key={c.id} value={c.id}>
+                      {personLabel(c)}
                     </SelectItem>
                   ))}
                 </SelectContent>

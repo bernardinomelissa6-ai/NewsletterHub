@@ -11,20 +11,40 @@ export default async function NewTrainingPage() {
   const session = await requireAuth();
   const { role, id: userId, name: userName } = session.user;
 
+  const PERSON_SELECT = "id, name, role, area:areas!users_area_id_fkey(name)";
+
   let collaborators: any[] = [];
   if (role === "ADMIN" || role === "DIRETOR_CENTRAL") {
-    const { data } = await supabaseAdmin.from("users").select("id, name, area:areas!users_area_id_fkey(name)").eq("is_active", true).eq("role", "COLLABORATOR").order("name");
+    const { data } = await supabaseAdmin
+      .from("users")
+      .select(PERSON_SELECT)
+      .eq("is_active", true)
+      .in("role", ["COLLABORATOR", "MANAGER", "DIRECTOR", "DIRETOR_CENTRAL"])
+      .order("name");
     collaborators = data ?? [];
   } else if (role === "MANAGER") {
+    // Equipe e gestores das áreas sob sua responsabilidade, além do próprio gestor
+    // (que pode não ter área vinculada ao cadastro)
     const areaIds = await getManagerAreaIds(userId);
-    const { data } = await supabaseAdmin.from("users").select("id, name, area:areas!users_area_id_fkey(name)").eq("is_active", true).eq("role", "COLLABORATOR").in("area_id", areaIds).order("name");
-    collaborators = data ?? [];
+    const [{ data: team }, { data: self }] = await Promise.all([
+      areaIds.length > 0
+        ? supabaseAdmin
+            .from("users")
+            .select(PERSON_SELECT)
+            .eq("is_active", true)
+            .in("role", ["COLLABORATOR", "MANAGER"])
+            .in("area_id", areaIds)
+        : Promise.resolve({ data: [] as any[] }),
+      supabaseAdmin.from("users").select(PERSON_SELECT).eq("id", userId),
+    ]);
+    const byId = new Map([...(team ?? []), ...(self ?? [])].map((u: any) => [u.id, u]));
+    collaborators = [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   } else {
-    const { data } = await supabaseAdmin.from("users").select("id, name, area:areas!users_area_id_fkey(name)").eq("id", userId);
+    const { data } = await supabaseAdmin.from("users").select(PERSON_SELECT).eq("id", userId);
     collaborators = data ?? [];
   }
 
-  const defaultCollaboratorName = collaborators[0]?.name ?? userName ?? "";
+  const defaultCollaborator = collaborators.find((c) => c.id === userId) ?? collaborators[0];
   const branches = await getBranches(true);
 
   return (
@@ -35,7 +55,7 @@ export default async function NewTrainingPage() {
           Registre um treinamento, curso ou consultoria realizada
         </p>
       </div>
-      <TrainingForm collaborators={collaborators} branches={branches} defaultCollaboratorName={defaultCollaboratorName} currentUserName={userName ?? ""} />
+      <TrainingForm collaborators={collaborators} branches={branches} defaultCollaborator={defaultCollaborator} currentUserName={userName ?? ""} />
     </div>
   );
 }

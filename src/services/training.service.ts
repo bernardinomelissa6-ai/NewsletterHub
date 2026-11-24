@@ -68,13 +68,11 @@ export async function getTrainings(filter: TrainingFilterInput, userId: string, 
     query = query.eq("collaborator_id", userId);
   } else if (userRole === "MANAGER") {
     const areaIds = await getManagerAreaIds(userId);
-    if (areaIds.length === 0) return { data: [], total: 0, page, limit, totalPages: 0 };
-    query = query.in("collaborator_id", await getCollaboratorIds(areaIds));
+    query = query.in("collaborator_id", await getVisiblePersonIds(areaIds, userId));
   } else if (userRole === "DIRECTOR") {
     const { data: areas } = await supabaseAdmin.from("areas").select("id").eq("director_id", userId);
     const areaIds = (areas ?? []).map((a: any) => a.id);
-    if (areaIds.length === 0) return { data: [], total: 0, page, limit, totalPages: 0 };
-    query = query.in("collaborator_id", await getCollaboratorIds(areaIds));
+    query = query.in("collaborator_id", await getVisiblePersonIds(areaIds, userId));
   }
 
   if (type) query = query.eq("type", type);
@@ -100,6 +98,12 @@ export async function getTrainings(filter: TrainingFilterInput, userId: string, 
 async function getCollaboratorIds(areaIds: string[]): Promise<string[]> {
   const { data } = await supabaseAdmin.from("users").select("id").in("area_id", areaIds);
   return (data ?? []).map((u: any) => u.id);
+}
+
+// Pessoas das áreas sob responsabilidade do gestor/diretor, mais ele próprio
+async function getVisiblePersonIds(areaIds: string[], userId: string): Promise<string[]> {
+  const ids = areaIds.length > 0 ? await getCollaboratorIds(areaIds) : [];
+  return [...new Set([...ids, userId])];
 }
 
 export async function deleteTraining(id: string, userId: string, userName: string, userRole: string) {
